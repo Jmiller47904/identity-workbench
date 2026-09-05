@@ -1,0 +1,81 @@
+name: Build downloadable clients
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: Windows
+            args: --win --x64
+          - os: macos-latest
+            platform: macOS
+            args: --mac --arm64 --x64
+          - os: ubuntu-latest
+            platform: Linux
+            args: --linux --x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Build desktop client
+        run: npm run desktop:dist -- ${{ matrix.args }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Upload client
+        uses: actions/upload-artifact@v4
+        with:
+          name: Identity-Workbench-${{ matrix.platform }}
+          if-no-files-found: error
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm run build:web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Identity-Workbench-Offline
+          path: web-release/Identity-Workbench-Offline.html
+          if-no-files-found: error
+  release:
+    needs: [build, offline]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: downloads
+          merge-multiple: true
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          RELEASE_TAG="v$(node -p "require('./package.json').version")"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "This version is already published; artifacts remain available on this run."
+            exit 0
+          fi
+          gh release create "$RELEASE_TAG" downloads/* --target "$SOURCE_SHA" --generate-notes --title "Identity Workbench $RELEASE_TAG"
