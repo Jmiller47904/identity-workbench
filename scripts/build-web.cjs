@@ -8,8 +8,8 @@ fs.mkdirSync(output,{recursive:true});
 for (const file of ['index.html','style.css','app.js']) fs.copyFileSync(path.join(root,'dist',file),path.join(output,file));
 fs.writeFileSync(path.join(output,'.nojekyll'),'');
 // A downloadable, self-contained HTML app uses CSP hashes, not unsafe-inline.
-const css = fs.readFileSync(path.join(root,'dist/style.css'),'utf8');
-const js = fs.readFileSync(path.join(root,'dist/app.js'),'utf8');
+const css = fs.readFileSync(path.join(root,'dist/style.css'),'utf8').replace(/\r\n?/g,'\n');
+const js = fs.readFileSync(path.join(root,'dist/app.js'),'utf8').replace(/\r\n?/g,'\n');
 const hash = text => crypto.createHash('sha256').update(text).digest('base64');
 let html = fs.readFileSync(path.join(root,'dist/index.html'),'utf8');
 html = html.replace("script-src 'self'",`script-src 'sha256-${hash(js)}'`).replace("style-src 'self'",`style-src 'sha256-${hash(css)}'`)
