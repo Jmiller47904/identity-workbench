@@ -4,7 +4,6 @@ Inspect JWT and SAML 2.0 responses locally. Decode claims, compare expected audi
 
 ## Use it
 
-- Browser: the existing private deployment is https://identity-workbench-jake.jmiller47904.chatgpt.site. GitHub Pages can host the same app after the repository is configured.
 - Offline: open `Identity-Workbench-Offline.html` in a modern browser. No installation or connection is needed for inspection.
 - Desktop: Windows Setup and Portable executables, macOS DMG, and Linux AppImage are produced by the downloadable-clients workflow. These binaries are not included in the source archive until built. The desktop app bundles the complete interface locally; it does not load the hosted site.
 
