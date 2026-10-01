@@ -37,3 +37,35 @@ Desktop packages are unsigned unless code signing is configured. Windows/macOS c
 Supports raw JWT (including Bearer prefix), raw SAML XML, Base64 SAML, and SAMLResponse form values. Encrypted JWE/SAML and multiple assertions are rejected. Time checks use the device clock with no skew allowance. SAML inspection is namespace-aware but does not implement full schema or profile validation. Token claims remain untrusted even if expected strings match.
 
 Synthetic examples contain no real identities or credentials. Never commit production tokens to examples, tests, issues, or build logs.
+
+## Offline Graph request builder (developer preview)
+
+This first Graph increment is a dependency-free CLI and reusable CommonJS library;
+there are no Graph controls in the browser/desktop interface yet. No requests are
+sent and no credentials are accepted or saved. Node.js is required.
+
+Save a synthetic `request.json`:
+
+```json
+{"template":"update-user-profile","userId":"demo@example.com","body":{"department":"Identity","jobTitle":"Analyst"}}
+```
+
+Run `node scripts/graph-request.cjs request.json` for a request/permission/impact
+preview. Add `powershell` or `curl` to print a command for explicit review and later
+execution. Output may contain your supplied profile data; redirect/save it only
+intentionally. Use synthetic data in shared examples. The CLI never executes exports.
+The cURL export targets POSIX shells; authenticate separately for either export.
+
+`get-me` supports delegated access and optional `select` fields: `id`, `displayName`,
+`userPrincipalName`, `department`, `jobTitle`. `update-user-profile` supports only
+nonempty string changes to `department` and `jobTitle`; null/clear operations,
+other properties, beta, sovereign clouds and arbitrary endpoints are outside this
+preview. Local validation is a narrow template check, not complete Graph schema,
+permission, domain, tenant, or dry-run validation.
+
+Sources verified October 1, 2026:
+- [Get user](https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0): `/me` uses delegated `User.Read`.
+- [Update user](https://learn.microsoft.com/en-us/graph/api/user-update?view=graph-rest-1.0): the other-user profile template lists `User.ReadUpdate.All`; caller privileges, consent and synchronization/source-of-authority restrictions still apply.
+
+Next: browser integration and a searchable attributes/claims reference, followed
+by explicitly authenticated testing. See roadmap issue #1.
