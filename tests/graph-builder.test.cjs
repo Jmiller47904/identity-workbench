@@ -6,7 +6,7 @@ test('read-only template constrains endpoint, permissions and selected fields', 
   const r = buildRequest({template:'get-me', select:['id','department','id']});
   assert.equal(r.url, 'https://graph.microsoft.com/v1.0/me?$select=id,department');
   assert.deepEqual(r.permissions, ['User.Read']);
-  assert.equal(r.documentation.verifiedOn, '2026-10-01');
+  assert.equal(r.documentation.verifiedOn, '2026-10-05');
   assert.throws(() => buildRequest({template:'get-me', authMode:'application'}));
   assert.throws(() => buildRequest({template:'get-me', body:{}}));
   assert.throws(() => buildRequest({template:'get-me', select:['passwordProfile']}));
@@ -21,17 +21,38 @@ test('profile update permits a documented subset and marks write impact', () => 
   assert.match(r.impact,/Writes/);
   assert.deepEqual(r.permissions,['User.ReadUpdate.All']);
 });
+test('profile update safely supports documented B2B and UPN characters', () => {
+  const body = {department:'Identity'};
+  const guest = buildRequest({
+    template:'update-user-profile',
+    userId:'AdeleVance_adatum.com#EXT#@contoso.onmicrosoft.com',
+    body
+  });
+  assert.equal(
+    guest.url,
+    'https://graph.microsoft.com/v1.0/users/AdeleVance_adatum.com%23EXT%23%40contoso.onmicrosoft.com'
+  );
+  const apostrophe = buildRequest({
+    template:'update-user-profile',
+    userId:"o'brien!ops@example.com",
+    body
+  });
+  assert.equal(
+    apostrophe.url,
+    'https://graph.microsoft.com/v1.0/users/o%27brien!ops%40example.com'
+  );
+});
 test('reject malformed, unsupported and secret-bearing input without echoing it', () => {
   for (const body of ['{"secret":"do-not-print"', '[]', '{}', '{"passwordProfile":{}}', '{"department":null}', '{"department":42}']) {
-    assert.throws(() => buildRequest({template:'update-user-profile', userId:'id', body}), e => !e.message.includes('do-not-print'));
+    assert.throws(() => buildRequest({template:'update-user-profile', userId:'00000000-0000-0000-0000-000000000001', body}), e => !e.message.includes('do-not-print'));
   }
-  for (const userId of ['https://evil.example','../me','id?x=y','id#frag',"id\n"]) {
+  for (const userId of ['https://evil.example','../me','id?x=y','id#frag',"id\n",'$user@example.com','user@-example.com']) {
     assert.throws(() => buildRequest({template:'update-user-profile', userId, body:{department:'IT'}}));
   }
   assert.throws(() => buildRequest({template:'__proto__'}));
 });
 test('exports quote literals without embedding or requesting credentials', () => {
-  const r = buildRequest({template:'update-user-profile', userId:'id', body:{department:"O'Brien $(touch /tmp/nope) `whoami`"}});
+  const r = buildRequest({template:'update-user-profile', userId:'00000000-0000-0000-0000-000000000001', body:{department:"O'Brien $(touch /tmp/nope) `whoami`"}});
   assert.match(exportRequest(r,'powershell'),/O''Brien/);
   assert.ok(exportRequest(r,'curl').includes("O'\"'\"'Brien"));
   assert.match(exportRequest(r,'curl'),/GRAPH_ACCESS_TOKEN/);
