@@ -2,6 +2,34 @@
 
 Inspect JWT and SAML 2.0 responses locally. Decode claims, compare expected audience/issuer/recipient, inspect time conditions, and get Entra-specific diagnostic clues. This is an inspection tool, not a token validator: it does not verify signatures, trust, replay protection, or full protocol validity.
 
+## Current capabilities
+
+| Capability | Status |
+| --- | --- |
+| Local JWT/SAML inspection and Entra diagnostic clues | Available in the browser and desktop interface |
+| Graph request/JSON builder, permission and impact previews, PowerShell/cURL export | Available as an offline Node.js CLI/library developer preview |
+| B2B guest UPN targets, including encoded `#EXT#` identifiers | Supported by the Graph profile-update template |
+| Graph builder browser integration and searchable Entra attributes/claims reference | Planned |
+| Authenticated Graph execution and tenant response diagnostics | Planned |
+
+The default branch can contain changes newer than published downloads. The Graph
+CLI/library is source-only and is not bundled in the current Electron packaging.
+Check [Releases](https://github.com/Jmiller47904/identity-workbench/releases) for
+published downloads and their version; a merged change does not automatically
+update an existing release.
+
+## Recent updates
+
+- **October 5, 2026 — B2B Graph targets:** the profile-update builder accepts guest
+  `#EXT#` UPNs and encodes identifiers as a single path segment, including
+  apostrophes. Added regression coverage. [PR #3](https://github.com/Jmiller47904/identity-workbench/pull/3).
+- **October 2026 — Offline Graph builder:** added documented `get-me` and
+  `update-user-profile` templates, local JSON checks, permission/impact previews,
+  and PowerShell/cURL exports with focused tests. [PR #2](https://github.com/Jmiller47904/identity-workbench/pull/2).
+  This increment does not execute requests or provide browser Graph controls.
+- **October 2026 — Expanded product direction:** established the daily analyst
+  companion roadmap, feature priorities, and longer-term module/product boundaries.
+
 ## Use it
 
 - Offline: open `Identity-Workbench-Offline.html` in a modern browser. No installation or connection is needed for inspection.
@@ -72,3 +100,43 @@ Sources verified October 5, 2026:
 
 Next: browser integration and a searchable attributes/claims reference, followed
 by explicitly authenticated testing. See roadmap issue #1.
+
+## Roadmap
+
+The next increments are browser integration for the Graph builder, a searchable
+Entra attributes/claims reference, and explicitly authenticated Graph testing.
+Later analyst workflows cover app registrations/service principals, roles/consent,
+federation, SCIM/provisioning, certificates, Conditional Access, sign-in diagnostics,
+token comparison, and explicitly saved sanitized case workspaces.
+
+Long-term ideas are exploratory; they are not implemented or committed releases.
+
+| Direction | Exploratory capabilities |
+| --- | --- |
+| Core Workbench modules | Enterprise Identity Doctor, Identity Integration Autopilot, Access Decision Engine |
+| Modules first; optional services at scale | Machine/AI Identity Governance, Certificate Dependency Autopilot |
+| Platform extensions/shared capabilities | Third-Party Exposure Graph, Institutional Knowledge Compiler |
+| Companion or separate product candidates | Enterprise AI Data Firewall, Compliance-to-Remediation Engine, Production Incident Investigator, SaaS Spend Autopilot |
+
+Keep a capability in Workbench when its primary user and evidence are centered on
+identity analysis. Consider a separate application/service when it requires
+continuous runtime enforcement, broad non-identity data, or a different operating
+team. Reuse shared connectors and evidence models across products.
+
+See [the central roadmap and detailed scope](https://github.com/Jmiller47904/identity-workbench/issues/1)
+and [October feature priorities](docs/FEATURE_PRIORITIES_2026-10.md).
+
+## Keeping this README current
+
+Changes that affect users or contributors should update this README in the same
+pull request: capabilities, usage examples, setup/build commands, permissions,
+security behavior, limitations, compatibility, and roadmap status. Record meaningful
+updates with a date and a linked PR or release; omit routine internal churn.
+
+Describe default-branch capabilities separately from published release assets.
+Keep planned work labeled as planned and developer previews labeled with their
+actual supported interfaces. Preserve official documentation sources and verification
+dates for Graph templates. Never include credentials, raw production tokens, or
+tenant-sensitive examples.
+
+Weekly maintenance and monthly feature work should include a documentation pass.
