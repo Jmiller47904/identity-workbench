@@ -14,16 +14,18 @@ Inspect JWT and SAML 2.0 responses locally. Decode claims, compare expected audi
 
 The default branch can contain changes newer than published downloads. The Graph
 CLI/library is source-only and is not bundled in the current Electron packaging.
-Check [Releases](https://github.com/Jmiller47904/identity-workbench/releases) for
-published downloads and their version; a merged change does not automatically
-update an existing release.
+The latest published download is [v0.2.0](https://github.com/Jmiller47904/identity-workbench/releases/tag/v0.2.0),
+published September 5, 2026: Windows Setup/Portable, macOS DMGs (x64 and arm64),
+Linux AppImage, and standalone offline HTML. It predates the October Graph builder
+and B2B target changes; those require the current source checkout. A merged change
+does not automatically update an existing release.
 
 ## Recent updates
 
 - **October 5, 2026 — B2B Graph targets:** the profile-update builder accepts guest
   `#EXT#` UPNs and encodes identifiers as a single path segment, including
   apostrophes. Added regression coverage. [PR #3](https://github.com/Jmiller47904/identity-workbench/pull/3).
-- **October 2026 — Offline Graph builder:** added documented `get-me` and
+- **October 1, 2026 — Offline Graph builder:** added documented `get-me` and
   `update-user-profile` templates, local JSON checks, permission/impact previews,
   and PowerShell/cURL exports with focused tests. [PR #2](https://github.com/Jmiller47904/identity-workbench/pull/2).
   This increment does not execute requests or provide browser Graph controls.
@@ -32,7 +34,7 @@ update an existing release.
 
 ## Use it
 
-- Offline: open `Identity-Workbench-Offline.html` in a modern browser. No installation or connection is needed for inspection.
+- Offline: download `Identity-Workbench-Offline.html` from [v0.2.0 release assets](https://github.com/Jmiller47904/identity-workbench/releases/tag/v0.2.0) and open it in a modern browser. For the current source version, run `npm run build:web` and open `web-release/Identity-Workbench-Offline.html`; the generated HTML is not included in the source checkout. No installation or connection is needed for inspection once the HTML is saved.
 - Desktop: Windows Setup and Portable executables, macOS DMG, and Linux AppImage are produced by the downloadable-clients workflow. These binaries are not included in the source archive until built. The desktop app bundles the complete interface locally; it does not load the hosted site.
 
 The input stays in page memory. No analytics, token uploads, token history, or browser storage. Documentation links open externally only when clicked. Clearing input or closing the window clears the application's in-memory results. The operating system may manage memory, crash dumps, or clipboard contents separately.
