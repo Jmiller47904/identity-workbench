@@ -140,3 +140,5 @@ dates for Graph templates. Never include credentials, raw production tokens, or
 tenant-sensitive examples.
 
 Weekly maintenance and monthly feature work should include a documentation pass.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/Y99kOgiXmRc?si=8QtXVajLUJ-LTqka" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
