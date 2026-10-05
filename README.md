@@ -60,10 +60,13 @@ The cURL export targets POSIX shells; authenticate separately for either export.
 `userPrincipalName`, `department`, `jobTitle`. `update-user-profile` supports only
 nonempty string changes to `department` and `jobTitle`; null/clear operations,
 other properties, beta, sovereign clouds and arbitrary endpoints are outside this
-preview. Local validation is a narrow template check, not complete Graph schema,
+preview. User targets accept a standard Entra object ID or UPN, including B2B
+`#EXT#` UPNs; the path segment is encoded according to the linked Graph guidance.
+UPNs beginning with `$` remain outside this preview because Microsoft documents a
+different OData parenthesized syntax for them. Local validation is a narrow template check, not complete Graph schema,
 permission, domain, tenant, or dry-run validation.
 
-Sources verified October 1, 2026:
+Sources verified October 5, 2026:
 - [Get user](https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0): `/me` uses delegated `User.Read`.
 - [Update user](https://learn.microsoft.com/en-us/graph/api/user-update?view=graph-rest-1.0): the other-user profile template lists `User.ReadUpdate.All`; caller privileges, consent and synchronization/source-of-authority restrictions still apply.
 
