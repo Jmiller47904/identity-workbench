@@ -22,6 +22,10 @@ does not automatically update an existing release.
 
 ## Recent updates
 
+- **October 12, 2026 — JWT time diagnostics:** malformed numeric dates that
+  overflow JavaScript's finite number range are reported only as invalid claims;
+  they are no longer also described as future or otherwise valid time values.
+  [PR #4](https://github.com/Jmiller47904/identity-workbench/pull/4).
 - **October 5, 2026 — B2B Graph targets:** the profile-update builder accepts guest
   `#EXT#` UPNs and encodes identifiers as a single path segment, including
   apostrophes. Added regression coverage. [PR #3](https://github.com/Jmiller47904/identity-workbench/pull/3).
@@ -64,7 +68,7 @@ Desktop packages are unsigned unless code signing is configured. Windows/macOS c
 
 ## Scope and limits
 
-Supports raw JWT (including Bearer prefix), raw SAML XML, Base64 SAML, and SAMLResponse form values. Encrypted JWE/SAML and multiple assertions are rejected. Time checks use the device clock with no skew allowance. SAML inspection is namespace-aware but does not implement full schema or profile validation. Token claims remain untrusted even if expected strings match.
+Supports raw JWT (including Bearer prefix), raw SAML XML, Base64 SAML, and SAMLResponse form values. Encrypted JWE/SAML and multiple assertions are rejected. JWT time claims must decode to finite numeric seconds; malformed or overflowing values are not evaluated as valid dates. Time checks use the device clock with no skew allowance. SAML inspection is namespace-aware but does not implement full schema or profile validation. Token claims remain untrusted even if expected strings match.
 
 Synthetic examples contain no real identities or credentials. Never commit production tokens to examples, tests, issues, or build logs.
 
