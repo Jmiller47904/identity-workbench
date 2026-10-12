@@ -18,6 +18,17 @@ test('JWT example reports expiry and Graph audience; clear removes decoded data'
 test('JWT expected audience mismatches; claim HTML is text',()=>{
  const dom=setup(),d=dom.window.document;d.getElementById('token').value=jwt({exp:1,aud:'other',name:'<img src=x onerror=alert(1)>'});d.getElementById('audience').value='expected';d.getElementById('analyze').click();assert.match(d.getElementById('diagnostics').textContent,/aud mismatch/);assert.equal(d.getElementById('claims').querySelector('img'),null);dom.window.close();
 });
+test('non-finite JWT times report only the invalid claim',()=>{
+ const dom=setup(),d=dom.window.document;
+ const token=Buffer.from('{"alg":"RS256"}').toString('base64url')+'.'+Buffer.from('{"exp":1e309,"nbf":1e309,"iat":1e309}').toString('base64url')+'.ZXhhbXBsZQ';
+ d.getElementById('token').value=token;d.getElementById('analyze').click();
+ const diagnostics=d.getElementById('diagnostics').textContent;
+ assert.match(diagnostics,/Invalid exp claim/);
+ assert.match(diagnostics,/Invalid nbf claim/);
+ assert.match(diagnostics,/Invalid iat claim/);
+ assert.doesNotMatch(diagnostics,/Expiration is in the future|Token is not active yet|Issued in the future|Inconsistent validity window/);
+ dom.window.close();
+});
 test('SAML sample decodes raw XML and Base64 form values',()=>{
  const dom=setup(),d=dom.window.document;d.getElementById('saml-sample').click();assert.equal(d.getElementById('error').textContent,'');assert.equal(d.getElementById('format').textContent,'SAML 2.0');assert.match(d.getElementById('claims').textContent,/Identity Engineering/);
  const xml=d.getElementById('token').value;d.getElementById('token').value=new URLSearchParams({SAMLResponse:Buffer.from(xml).toString('base64')}).toString();d.getElementById('audience').value='urn:example:app';d.getElementById('recipient').value='https://wrong.example.com';d.getElementById('analyze').click();assert.equal(d.getElementById('error').textContent,'');assert.match(d.getElementById('diagnostics').textContent,/Audience matches/);assert.match(d.getElementById('diagnostics').textContent,/Recipient mismatch/);dom.window.close();
