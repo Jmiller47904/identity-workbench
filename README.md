@@ -22,6 +22,12 @@ does not automatically update an existing release.
 
 ## Recent updates
 
+- **October 19, 2026 — strict SAML time syntax (proposed):** SAML conditions
+  reject impossible calendar dates and timezone-ambiguous timestamps instead of
+  relying on JavaScript's permissive date normalization. Valid inspected values
+  must use the supported XML `dateTime` form with `Z` or a numeric timezone.
+  [PR #5](https://github.com/Jmiller47904/identity-workbench/pull/5). This is an
+  unmerged source change and is not present in v0.2.0 release assets.
 - **October 12, 2026 — JWT time diagnostics:** malformed numeric dates that
   overflow JavaScript's finite number range are reported only as invalid claims;
   they are no longer also described as future or otherwise valid time values.
@@ -68,7 +74,7 @@ Desktop packages are unsigned unless code signing is configured. Windows/macOS c
 
 ## Scope and limits
 
-Supports raw JWT (including Bearer prefix), raw SAML XML, Base64 SAML, and SAMLResponse form values. Encrypted JWE/SAML and multiple assertions are rejected. JWT time claims must decode to finite numeric seconds; malformed or overflowing values are not evaluated as valid dates. Time checks use the device clock with no skew allowance. SAML inspection is namespace-aware but does not implement full schema or profile validation. Token claims remain untrusted even if expected strings match.
+Supports raw JWT (including Bearer prefix), raw SAML XML, Base64 SAML, and SAMLResponse form values. Encrypted JWE/SAML and multiple assertions are rejected. JWT time claims must decode to finite numeric seconds; malformed or overflowing values are not evaluated as valid dates. SAML condition times use a strict supported subset of XML `dateTime`: a four-digit year, real calendar date, seconds, optional fractional seconds, and explicit `Z` or numeric timezone (up to ±14:00). Time checks use the device clock with no skew allowance. SAML inspection is namespace-aware but does not implement full schema or profile validation. Token claims remain untrusted even if expected strings match.
 
 Synthetic examples contain no real identities or credentials. Never commit production tokens to examples, tests, issues, or build logs.
 
