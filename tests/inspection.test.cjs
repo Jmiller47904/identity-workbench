@@ -36,6 +36,15 @@ test('SAML sample decodes raw XML and Base64 form values',()=>{
 test('Multiple SAML audience restrictions all must match',()=>{
  const dom=setup(),d=dom.window.document;d.getElementById('saml-sample').click();d.getElementById('token').value=d.getElementById('token').value.replace('</saml:Conditions>','<saml:AudienceRestriction><saml:Audience>urn:other</saml:Audience></saml:AudienceRestriction></saml:Conditions>');d.getElementById('audience').value='urn:example:app';d.getElementById('analyze').click();assert.match(d.getElementById('diagnostics').textContent,/Audience mismatch/);dom.window.close();
 });
+test('SAML conditions reject normalized and timezone-ambiguous dates',()=>{
+ const dom=setup(),d=dom.window.document;d.getElementById('saml-sample').click();
+ for(const invalid of ['2026-02-30T00:00:00Z','2026-10-19T00:00:00']){
+  d.getElementById('token').value=d.getElementById('token').value.replace(/NotBefore="[^"]+"/,`NotBefore="${invalid}"`);d.getElementById('analyze').click();
+  const diagnostics=d.getElementById('diagnostics').textContent;
+  assert.match(diagnostics,/Invalid timestamp/);assert.doesNotMatch(diagnostics,/Conditions \/ NotBeforetime condition passes/);
+ }
+ dom.window.close();
+});
 test('Malformed, encrypted and entity-bearing inputs fail without stale results',()=>{
  const dom=setup(),d=dom.window.document;for(const input of ['a.b.c.d.e','<broken>','<!DOCTYPE a [<!ENTITY x SYSTEM "file:///etc/passwd">]><a>&x;</a>']){d.getElementById('jwt-sample').click();d.getElementById('token').value=input;d.getElementById('analyze').click();assert.notEqual(d.getElementById('error').textContent,'');assert.equal(d.getElementById('results').hidden,true);}dom.window.close();
 });
