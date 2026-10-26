@@ -26,6 +26,8 @@ does not automatically update an existing release.
   reject impossible calendar dates and timezone-ambiguous timestamps instead of
   relying on JavaScript's permissive date normalization. Valid inspected values
   must use the supported XML `dateTime` form with `Z` or a numeric timezone.
+  The same PR adds browser/offline and cross-platform desktop packaging checks
+  for pull requests while explicitly skipping Pages deployment and releases.
   [PR #5](https://github.com/Jmiller47904/identity-workbench/pull/5). This is an
   unmerged source change and is not present in v0.2.0 release assets.
 - **October 12, 2026 — JWT time diagnostics:** malformed numeric dates that
@@ -65,8 +67,8 @@ Dependencies are pinned and the lockfile is committed. Electron uses sandboxing,
 
 1. Create or select the GitHub repository and push this source to `main`.
 2. In Settings → Pages, select **GitHub Actions** as the publishing source. Check the site's intended audience; GitHub Pages access is separate from source-repository visibility.
-3. The **Publish browser app** workflow tests and deploys `web-release/` on each push to `main`. Relative paths support repository subpaths.
-4. The **Build downloadable clients** workflow runs on pushes to main, version tags, or manual runs. After all builds pass, it publishes the package version as a GitHub Release if that version does not already exist. Existing releases are never overwritten. Bump package.json and the lockfile version before publishing updated release assets.
+3. The **Publish browser app** workflow tests browser/offline builds on pull requests and deploys `web-release/` only after a push to `main` or an explicit manual run. Relative paths support repository subpaths.
+4. The **Build downloadable clients** workflow packages Windows, macOS and Linux clients on pull requests, pushes to main, version tags, or manual runs. Pull requests upload review artifacts but never publish a release. For non-PR runs, after all builds pass, it publishes the package version as a GitHub Release if that version does not already exist. Existing releases are never overwritten. Bump package.json and the lockfile version before publishing updated release assets.
 
 GitHub Pages workflow reference: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
 
