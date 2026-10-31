@@ -17,10 +17,82 @@ function analyzeSAML(input,expected,now){let xml=input;if(/(?:^|[?&])SAMLRespons
 add('info','SAML signature not verified','A signature element is not proof of authenticity. This tool does not validate signatures, trust, response correlation, replay protection, or complete SAML profile rules.');if(!doc.getElementsByTagNameNS('http://www.w3.org/2000/09/xmldsig#','Signature').length)add('warn','No XML signature found','Check your service provider’s signing requirements and trusted IdP certificate.');const statuses=all('StatusCode',P).map(x=>x.getAttribute('Value'));if(statuses.length)add(statuses[0]==='urn:oasis:names:tc:SAML:2.0:status:Success'?'info':'issue','Response status',statuses.join(' → '));
 for(const el of [...all('Conditions'),...all('SubjectConfirmationData')])for(const key of ['NotBefore','NotOnOrAfter']){const value=el.getAttribute(key);if(!value)continue;claims.push([el.localName+'.'+key,value]);const stamp=parseSamlTime(value);const bad=!Number.isFinite(stamp)||(key==='NotBefore'?stamp>now:stamp<=now);add(bad?'issue':'info',el.localName+' / '+key,!Number.isFinite(stamp)?'Invalid timestamp. Expected an XML dateTime with an explicit Z or numeric timezone and a real calendar date.':`${value} — ${bad?(key==='NotBefore'?'not active yet':'expired'):'time condition passes'}. Uses this device’s clock, with no skew allowance.`);}
 if(![...all('Conditions'),...all('SubjectConfirmationData')].some(x=>x.hasAttribute('NotOnOrAfter')))add('warn','No assertion expiration found','Check the required lifetime restrictions for your SAML profile.');for(const [label,value,actual] of [['Issuer',expected.iss,issuers],['Audience',expected.aud,audiences],['Recipient',expected.recipient,recipients]])if(value){const match=actual.length>0&&(label==='Audience'?all('AudienceRestriction').length>0&&all('AudienceRestriction').every(r=>Array.from(r.getElementsByTagNameNS(A,'Audience')).some(x=>x.textContent.trim()===value)):actual.every(x=>x===value));add(match?'info':'issue',label+' '+(match?'matches':'mismatch'),match?'The inspected values match your expected configuration. Full protocol validation is still required.':'One or more required values are absent or differ. Compare the IdP and service provider configuration.');}if(!audiences.length)add('warn','No audience restriction found','Check the service provider’s audience requirements.');if(!names.length)add('info','No NameID found','Inspect subject and attribute mappings against the service provider’s requirements.');return{format:'SAML 2.0',claims,raw:xml,findings,stats:[['Assertions',assertions.length],['Attributes',all('Attribute').length],['Signatures',doc.getElementsByTagNameNS('http://www.w3.org/2000/09/xmldsig#','Signature').length]]};}
-function render(r){$('empty').hidden=true;$('results').hidden=false;$('format').textContent=r.format;$('summary').replaceChildren(...r.stats.map(([k,v])=>{const d=node('div','stat');d.append(node('small','',k),node('strong','',String(v)));return d;}));$('count').textContent=r.findings.length+' checks';$('diagnostics').replaceChildren(...r.findings.map(f=>{const row=node('div','finding');const body=node('div');body.append(node('b','',f.title),node('p','',f.body));row.append(node('span','severity '+f.level,f.level.toUpperCase()),body);return row;}));$('claims').replaceChildren(...r.claims.map(([k,v])=>{const row=node('div','claim');const val=node('div','claim-value',typeof v==='object'?JSON.stringify(v,null,2):String(v));if(descriptions[k])val.append(node('span','claim-help',descriptions[k]));if(['exp','nbf','iat'].includes(k)&&typeof v==='number')val.append(node('span','claim-help',date(v)));row.append(node('div','claim-name',k),val);return row;}));$('raw').textContent=r.raw;}
-function inspect(){ $('error').textContent='';try{let input=$('token').value.trim();if(!input)throw Error('Paste a token or choose an example first.');if(input.length>1000000)throw Error('Input exceeds the 1 MB inspection limit.');const expected={aud:$('audience').value.trim(),iss:$('issuer').value.trim(),recipient:$('recipient').value.trim()};const now=Date.now()/1000;const isJWT=/^(Bearer\s+)?[A-Za-z0-9_-]+\./i.test(input);render(isJWT?analyzeJWT(input,expected,now):analyzeSAML(input,expected,now));}catch(e){$('error').textContent=e.message;$('results').hidden=true;$('empty').hidden=false;$('format').textContent='CHECK INPUT';}}
-$('analyze').onclick=inspect;$('clear').onclick=()=>{$('token').value='';$('error').textContent='';$('results').hidden=true;$('empty').hidden=false;$('format').textContent='READY';for(const id of ['claims','diagnostics','summary','raw'])$(id).replaceChildren();$('token').focus();};
-function resetExpected(){for(const id of ['audience','issuer','recipient'])$(id).value='';}
+function oauthErrorDetails(input){
+ const value=input.trim();
+ const authKeys=['code','access_token','id_token','refresh_token'];
+ if(value.startsWith('{')){
+  let body;
+  try{body=JSON.parse(value);}catch{throw Error('OAuth/OIDC JSON response must be valid JSON.');}
+  if(!body||typeof body!=='object'||Array.isArray(body))throw Error('OAuth/OIDC JSON response must be an object.');
+  if(typeof body.error!=='string'){
+   if(authKeys.some(key=>Object.hasOwn(body,key)))throw Error('This view accepts error responses only. Do not paste successful token responses or authorization codes.');
+   return null;
+  }
+  if(!body.error||authKeys.some(key=>Object.hasOwn(body,key)))throw Error('This callback has an empty error code or mixed OAuth/OIDC response values. Inspect one error response only.');
+  const details={};
+  for(const key of ['error','error_description','error_uri','state','timestamp','trace_id','correlation_id'])if(typeof body[key]==='string')details[key]=body[key];
+  if(Array.isArray(body.error_codes))details.error_codes=body.error_codes.filter(x=>typeof x==='string'||typeof x==='number');
+  return details;
+ }
+ let params=null;
+ if(/^[a-z][a-z0-9+.-]*:\/\//i.test(value)){
+  let url;try{url=new URL(value);}catch{return null;}
+  params=new URLSearchParams(url.search);
+  const fragment=url.hash.replace(/^#\??/,'');
+  for(const [key,item] of new URLSearchParams(fragment))params.append(key,item);
+ }else if(/^[?#]/.test(value)||/^(?:error|error_description|error_uri|state|code|access_token|id_token|refresh_token)=/i.test(value)){
+  params=new URLSearchParams(value.replace(/^[?#]/,''));
+ }else return null;
+ const errors=params.getAll('error');
+ const hasCredential=authKeys.some(key=>params.has(key));
+ if(!errors.length){
+  if(hasCredential)throw Error('This view accepts error responses only. Do not paste successful token responses or authorization codes.');
+  return null;
+ }
+ if(errors.length!==1||hasCredential)throw Error('This callback has ambiguous or mixed OAuth/OIDC response values. Inspect one error response only.');
+ const details={error:errors[0]};
+ for(const key of ['error_description','error_uri','state','timestamp','trace_id','correlation_id']){const item=params.get(key);if(item!==null)details[key]=item;}
+ const codes=params.getAll('error_codes');if(codes.length)details.error_codes=codes;
+ if(!details.error)throw Error('OAuth/OIDC error response is missing its error code.');
+ return details;
+}
+function analyzeOAuthError(input,expectedState){
+ const details=oauthErrorDetails(input);
+ if(!details)return null;
+ const code=details.error.toLowerCase(),findings=[];
+ const add=(level,title,body)=>findings.push({level,title,body});
+ if(['interaction_required','login_required','consent_required','user_authentication_required'].includes(code))
+  add('warn','Interactive authentication may be required','This error indicates the request could not complete without additional user interaction or consent. Follow the application’s documented sign-in flow; this inspector does not retry or perform authentication.');
+ else if(code==='access_denied')
+  add('issue','Authorization was denied','The error code alone does not explain why. Review the accompanying description and the identity provider’s authoritative sign-in diagnostics.');
+ else if(code==='invalid_scope')
+  add('issue','Requested scope was rejected','Compare the requested scope and resource with the application registration and the API documentation.');
+ else if(code==='invalid_request')
+  add('warn','Authorization request was invalid','Compare required parameters and response mode with the documentation for the specific OAuth/OIDC flow.');
+ else if(code==='unauthorized_client')
+  add('issue','Client is not authorized for this flow','Check that the application registration and selected grant/response flow match the endpoint requirements.');
+ else if(code==='unsupported_response_type')
+  add('issue','Response type is not supported','Check the authorization endpoint flow and application registration settings.');
+ else if(code==='server_error'||code==='temporarily_unavailable')
+  add('warn','Identity provider reported a service error','Use trace and correlation identifiers, when present, to investigate with the provider. This inspector does not retry the request.');
+ else
+  add('info','OAuth/OIDC error response','Use the stable error code to classify the response. The description is developer diagnostic text; do not use it as the programmatic error key.');
+ const expected=expectedState||'',returned=details.state||'';
+ if(expected){
+  if(!returned)add('issue','State value is missing','An expected state value was supplied, but the response has no state parameter to compare.');
+  else if(returned!==expected)add('issue','State mismatch','The returned state does not exactly match the expected value. Check the original authorization request and callback correlation.');
+  else add('info','State matches','The returned state exactly matches the value supplied for this local comparison. This check alone does not validate the complete authentication flow.');
+ }else if(returned)add('warn','State was not checked','The response includes state, but no expected value was supplied. No request/response correlation check was performed.');
+ const claims=Object.entries(details);
+ const stats=[['Error code',details.error],['Trace ID',details.trace_id||'Not supplied'],['Correlation ID',details.correlation_id||'Not supplied']];
+ return{format:'OAuth/OIDC error',claims,raw:JSON.stringify(details,null,2),findings,stats,notice:'Authorization error response inspection only. Provider text is untrusted; error_uri is shown as text and is never opened. State is only compared if you supply an expected value.'};
+}
+function render(r){$('empty').hidden=true;$('results').hidden=false;$('inspection-notice').textContent=r.notice||'Inspection only. Signatures, trust, replay protection, and full protocol validity are not verified.';$('format').textContent=r.format;$('summary').replaceChildren(...r.stats.map(([k,v])=>{const d=node('div','stat');d.append(node('small','',k),node('strong','',String(v)));return d;}));$('count').textContent=r.findings.length+' checks';$('diagnostics').replaceChildren(...r.findings.map(f=>{const row=node('div','finding');const body=node('div');body.append(node('b','',f.title),node('p','',f.body));row.append(node('span','severity '+f.level,f.level.toUpperCase()),body);return row;}));$('claims').replaceChildren(...r.claims.map(([k,v])=>{const row=node('div','claim');const val=node('div','claim-value',typeof v==='object'?JSON.stringify(v,null,2):String(v));if(descriptions[k])val.append(node('span','claim-help',descriptions[k]));if(['exp','nbf','iat'].includes(k)&&typeof v==='number')val.append(node('span','claim-help',date(v)));row.append(node('div','claim-name',k),val);return row;}));$('raw').textContent=r.raw;}
+function inspect(){ $('error').textContent='';try{let input=$('token').value.trim();if(!input)throw Error('Paste a token or choose an example first.');if(input.length>1000000)throw Error('Input exceeds the 1 MB inspection limit.');const expected={aud:$('audience').value.trim(),iss:$('issuer').value.trim(),recipient:$('recipient').value.trim(),state:$('expected-oauth-state').value};const oauth=analyzeOAuthError(input,expected.state);if(oauth){render(oauth);return;}const now=Date.now()/1000;const isJWT=/^(Bearer\s+)?[A-Za-z0-9_-]+\./i.test(input);render(isJWT?analyzeJWT(input,expected,now):analyzeSAML(input,expected,now));}catch(e){$('error').textContent=e.message;$('results').hidden=true;$('empty').hidden=false;$('format').textContent='CHECK INPUT';}}
+ $('analyze').onclick=inspect;$('clear').onclick=()=>{$('token').value='';resetExpected();$('error').textContent='';invalidateInspection();$('token').focus();};
+function resetExpected(){for(const id of ['audience','issuer','recipient','expected-oauth-state'])$(id).value='';}
+function invalidateInspection(){$('results').hidden=true;$('empty').hidden=false;$('format').textContent='READY';for(const id of ['claims','diagnostics','summary','raw'])$(id).replaceChildren();}
+for(const id of ['audience','issuer','recipient','expected-oauth-state'])$(id).addEventListener('input',invalidateInspection);
 $('jwt-sample').onclick=()=>{resetExpected();const n=Math.floor(Date.now()/1000);const enc=o=>btoa(JSON.stringify(o)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');$('token').value=enc({typ:'JWT',alg:'RS256',kid:'synthetic-example'})+'.'+enc({aud:'00000003-0000-0000-c000-000000000000',iss:'https://sts.windows.net/11111111-2222-3333-4444-555555555555/',iat:n-3900,nbf:n-3900,exp:n-300,ver:'1.0',tid:'11111111-2222-3333-4444-555555555555',name:'Synthetic example user',scp:'User.Read',appid:'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'})+'.c3ludGhldGljLXNpZ25hdHVyZQ';inspect();};
 $('saml-sample').onclick=()=>{resetExpected();const now=Date.now();$('token').value=`<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="_demo_response" Version="2.0" IssueInstant="${new Date(now).toISOString()}">
   <saml:Issuer>https://idp.example.com</saml:Issuer>
@@ -32,6 +104,8 @@ $('saml-sample').onclick=()=>{resetExpected();const now=Date.now();$('token').va
     <saml:AttributeStatement><saml:Attribute Name="role"><saml:AttributeValue>Reader</saml:AttributeValue></saml:Attribute><saml:Attribute Name="department"><saml:AttributeValue>Identity Engineering</saml:AttributeValue></saml:Attribute></saml:AttributeStatement>
   </saml:Assertion>
 </samlp:Response>`;inspect();};
+
+$('oidc-sample').onclick=()=>{resetExpected();$('expected-oauth-state').value='synthetic-state';$('token').value='https://login.example.com/callback?error=interaction_required&error_description=Additional+authentication+is+required&state=synthetic-state&trace_id=synthetic-trace';inspect();};
 
 const graphBuilder=globalThis.IdentityGraphBuilder;
 let currentGraphRequest=null;
