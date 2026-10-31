@@ -7,7 +7,7 @@ Inspect JWT and SAML 2.0 responses locally. Decode claims, compare expected audi
 | Capability | Status |
 | --- | --- |
 | Local JWT/SAML inspection and Entra diagnostic clues | Available in the browser and desktop interface |
-| Graph request/JSON builder, permission and impact previews, PowerShell/cURL export | Available in the browser, desktop UI, and offline Node.js CLI/library |
+| Graph request/JSON builder, permission and impact previews, PowerShell/cURL export, local response explanations | Available in the browser, desktop UI, and offline Node.js CLI/library |
 | B2B guest UPN targets, including encoded `#EXT#` identifiers | Supported by the Graph profile-update template |
 | Searchable Entra attributes/claims reference | Planned (tracked in PR #6) |
 | Authenticated Graph execution and tenant response diagnostics | Planned |
@@ -21,7 +21,7 @@ does not automatically update an existing release.
 
 ## Recent updates
 
-- **October 31, 2026 — browser Graph workbench (proposed):** brings the existing offline templates into the browser and desktop UI for local request previews and JSON, PowerShell, and cURL exports. It sends no requests and does not accept credentials. [PR #7](https://github.com/Jmiller47904/identity-workbench/pull/7).
+- **October 31, 2026 — browser Graph workbench (proposed):** brings the existing offline templates into the browser and desktop UI for local request previews, JSON, PowerShell, and cURL exports, and adds a local explainer for pasted Graph status/body data. It sends no requests and does not accept credentials. [PR #7](https://github.com/Jmiller47904/identity-workbench/pull/7).
 
 - **October 19, 2026 — strict SAML time syntax (proposed):** SAML conditions
   reject impossible calendar dates and timezone-ambiguous timestamps instead of
@@ -101,6 +101,20 @@ later execution. Output may contain your supplied profile data; redirect/save it
 intentionally. Use synthetic data in shared examples. Neither the CLI nor UI executes exports.
 The cURL export targets POSIX shells; authenticate separately for either export.
 
+The same workbench includes an offline response explainer. Paste an HTTP status,
+optional Retry-After value, and JSON response body to see general guidance for
+common errors, throttling, and responses containing @odata.nextLink. It never
+retries a request or follows a next-page URL. For paging, Microsoft recommends
+using the full @odata.nextLink URL as returned; required custom headers may need
+to be supplied again on subsequent directory-page requests. For HTTP 429, honor
+Retry-After; if it is absent, Microsoft recommends exponential backoff. A 403
+can also mean the signed-in user lacks access even when the application has been
+granted a permission. These are general explanations, not tenant-specific diagnosis.
+
+Response bodies can contain identity data. The explainer processes pasted values
+only in page memory; clear the response or close the window when finished. No
+response is uploaded, saved, or logged.
+
 `get-me` supports delegated access and optional `select` fields: `id`, `displayName`,
 `userPrincipalName`, `department`, `jobTitle`. `update-user-profile` supports only
 nonempty string changes to `department` and `jobTitle`; null/clear operations,
@@ -114,6 +128,11 @@ permission, domain, tenant, or dry-run validation.
 Sources verified October 5, 2026:
 - [Get user](https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0): `/me` uses delegated `User.Read`.
 - [Update user](https://learn.microsoft.com/en-us/graph/api/user-update?view=graph-rest-1.0): the other-user profile template lists `User.ReadUpdate.All`; caller privileges, consent and synchronization/source-of-authority restrictions still apply.
+
+Response guidance verified October 31, 2026:
+- [Microsoft Graph error responses](https://learn.microsoft.com/en-us/graph/errors): structured errors include an error code and message; use them with the HTTP status and request ID when available.
+- [Microsoft Graph throttling](https://learn.microsoft.com/en-us/graph/throttling): honor Retry-After for HTTP 429; if absent, use exponential backoff and avoid immediate retries.
+- [Microsoft Graph paging](https://learn.microsoft.com/en-us/graph/paging): use the complete @odata.nextLink URL as an opaque value; custom headers other than Authorization and Content-Type aren't carried to subsequent requests by default.
 
 Next: explicitly authenticated testing with tenant/account identification, least-privilege guidance, and an impact preview before mutations. The searchable attributes/claims reference is tracked separately in PR #6 and broader coverage remains planned. See roadmap issue #1.
 

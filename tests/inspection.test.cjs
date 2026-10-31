@@ -100,3 +100,62 @@ test('Graph browser workbench shows local validation errors without echoing body
  assert.equal(d.querySelector('[data-graph-execute]'),null);
  dom.window.close();
 });
+
+test('Graph response explainer gives local throttling guidance and escapes response text',()=>{
+ const dom=setup(),d=dom.window.document;
+ let fetchCalls=0;dom.window.fetch=()=>{fetchCalls++;throw new Error('network use is forbidden in this test');};
+ d.getElementById('graph-response-status').value='429';
+ d.getElementById('graph-response-retry').value='10';
+ d.getElementById('graph-response-body').value=JSON.stringify({error:{
+  code:'TooManyRequests',message:'<img src=x onerror=alert(1)>',
+  innerError:{code:'429','request-id':'synthetic-request-id'}
+ }});
+ d.getElementById('graph-response-explain').click();
+ const result=d.getElementById('graph-response-result');
+ assert.equal(result.hidden,false);
+ assert.match(result.textContent,/throttled this request/);
+ assert.match(result.textContent,/Retry-After value \(10\)/);
+ assert.match(result.textContent,/Do not retry immediately/);
+ assert.match(result.textContent,/synthetic-request-id/);
+ assert.equal(result.querySelector('img'),null);
+ assert.equal(fetchCalls,0);
+ dom.window.close();
+});
+
+test('Graph response explainer identifies opaque nextLink paging without following it',()=>{
+ const dom=setup(),d=dom.window.document;
+ d.getElementById('graph-response-status').value='200';
+ d.getElementById('graph-response-body').value=JSON.stringify({
+  value:[],
+  '@odata.nextLink':'https://graph.microsoft.com/v1.0/users?$skiptoken=synthetic-cursor'
+ });
+ d.getElementById('graph-response-explain').click();
+ const result=d.getElementById('graph-response-result').textContent;
+ assert.match(result,/Another page is available/);
+ assert.match(result,/complete URL exactly as returned/);
+ assert.match(result,/custom headers/);
+ assert.doesNotMatch(result,/synthetic-cursor/);
+ dom.window.close();
+});
+
+test('Graph response explainer diagnoses access denial and clears stale input/results',()=>{
+ const dom=setup(),d=dom.window.document;
+ d.getElementById('graph-response-status').value='403';
+ d.getElementById('graph-response-body').value=JSON.stringify({error:{
+  code:'Authorization_RequestDenied',message:'Access denied.'
+ }});
+ d.getElementById('graph-response-explain').click();
+ assert.match(d.getElementById('graph-response-result').textContent,/Access was denied/);
+ assert.match(d.getElementById('graph-response-result').textContent,/signed-in user/);
+ d.getElementById('graph-response-status').value='429';
+ d.getElementById('graph-response-status').dispatchEvent(new dom.window.Event('input'));
+ assert.equal(d.getElementById('graph-response-result').hidden,true);
+ d.getElementById('graph-response-body').value='{invalid';
+ d.getElementById('graph-response-explain').click();
+ assert.match(d.getElementById('graph-response-error').textContent,/valid JSON/);
+ d.getElementById('graph-response-clear').click();
+ assert.equal(d.getElementById('graph-response-status').value,'');
+ assert.equal(d.getElementById('graph-response-body').value,'');
+ assert.equal(d.getElementById('graph-response-result').hidden,true);
+ dom.window.close();
+});
