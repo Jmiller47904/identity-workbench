@@ -7,20 +7,21 @@ Inspect JWT and SAML 2.0 responses locally. Decode claims, compare expected audi
 | Capability | Status |
 | --- | --- |
 | Local JWT/SAML inspection and Entra diagnostic clues | Available in the browser and desktop interface |
-| Graph request/JSON builder, permission and impact previews, PowerShell/cURL export | Available as an offline Node.js CLI/library developer preview |
+| Graph request/JSON builder, permission and impact previews, PowerShell/cURL export | Available in the browser, desktop UI, and offline Node.js CLI/library |
 | B2B guest UPN targets, including encoded `#EXT#` identifiers | Supported by the Graph profile-update template |
-| Graph builder browser integration and searchable Entra attributes/claims reference | Planned |
+| Searchable Entra attributes/claims reference | Planned (tracked in PR #6) |
 | Authenticated Graph execution and tenant response diagnostics | Planned |
 
 The default branch can contain changes newer than published downloads. The Graph
-CLI/library is source-only and is not bundled in the current Electron packaging.
+request builder is bundled in the browser and desktop source, and its CLI remains available.
 The latest published download is [v0.2.0](https://github.com/Jmiller47904/identity-workbench/releases/tag/v0.2.0),
 published September 5, 2026: Windows Setup/Portable, macOS DMGs (x64 and arm64),
-Linux AppImage, and standalone offline HTML. It predates the October Graph builder
-and B2B target changes; those require the current source checkout. A merged change
+Linux AppImage, and standalone offline HTML. It predates the October Graph builder, B2B target changes, and browser workbench; those require the current source checkout. A merged change
 does not automatically update an existing release.
 
 ## Recent updates
+
+- **October 31, 2026 — browser Graph workbench (proposed):** brings the existing offline templates into the browser and desktop UI for local request previews and JSON, PowerShell, and cURL exports. It sends no requests and does not accept credentials. [PR #7](https://github.com/Jmiller47904/identity-workbench/pull/7).
 
 - **October 19, 2026 — strict SAML time syntax (proposed):** SAML conditions
   reject impossible calendar dates and timezone-ambiguous timestamps instead of
@@ -40,7 +41,7 @@ does not automatically update an existing release.
 - **October 1, 2026 — Offline Graph builder:** added documented `get-me` and
   `update-user-profile` templates, local JSON checks, permission/impact previews,
   and PowerShell/cURL exports with focused tests. [PR #2](https://github.com/Jmiller47904/identity-workbench/pull/2).
-  This increment does not execute requests or provide browser Graph controls.
+  This increment does not execute Graph requests; browser controls are proposed separately in [PR #7](https://github.com/Jmiller47904/identity-workbench/pull/7).
 - **October 2026 — Expanded product direction:** established the daily analyst
   companion roadmap, feature priorities, and longer-term module/product boundaries.
 
@@ -80,11 +81,13 @@ Supports raw JWT (including Bearer prefix), raw SAML XML, Base64 SAML, and SAMLR
 
 Synthetic examples contain no real identities or credentials. Never commit production tokens to examples, tests, issues, or build logs.
 
-## Offline Graph request builder (developer preview)
+## Graph request workbench (offline preview)
 
-This first Graph increment is a dependency-free CLI and reusable CommonJS library;
-there are no Graph controls in the browser/desktop interface yet. No requests are
-sent and no credentials are accepted or saved. Node.js is required.
+The browser and desktop workbench use the same request templates and validation
+functions as the dependency-free Node.js CLI/library. The UI can preview documented
+requests and export JSON, PowerShell, or cURL text. It does not execute requests,
+accept credentials, or save tokens or secrets. The Graph builder requires no network
+access; the application Content Security Policy blocks connections.
 
 Save a synthetic `request.json`:
 
@@ -92,10 +95,10 @@ Save a synthetic `request.json`:
 {"template":"update-user-profile","userId":"demo@example.com","body":{"department":"Identity","jobTitle":"Analyst"}}
 ```
 
-Run `node scripts/graph-request.cjs request.json` for a request/permission/impact
-preview. Add `powershell` or `curl` to print a command for explicit review and later
-execution. Output may contain your supplied profile data; redirect/save it only
-intentionally. Use synthetic data in shared examples. The CLI never executes exports.
+Run `node scripts/graph-request.cjs request.json` for the same request/permission/impact
+preview as the UI. Add `powershell` or `curl` to print a command for explicit review and
+later execution. Output may contain your supplied profile data; redirect/save it only
+intentionally. Use synthetic data in shared examples. Neither the CLI nor UI executes exports.
 The cURL export targets POSIX shells; authenticate separately for either export.
 
 `get-me` supports delegated access and optional `select` fields: `id`, `displayName`,
@@ -112,13 +115,14 @@ Sources verified October 5, 2026:
 - [Get user](https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0): `/me` uses delegated `User.Read`.
 - [Update user](https://learn.microsoft.com/en-us/graph/api/user-update?view=graph-rest-1.0): the other-user profile template lists `User.ReadUpdate.All`; caller privileges, consent and synchronization/source-of-authority restrictions still apply.
 
-Next: browser integration and a searchable attributes/claims reference, followed
-by explicitly authenticated testing. See roadmap issue #1.
+Next: explicitly authenticated testing with tenant/account identification, least-privilege guidance, and an impact preview before mutations. The searchable attributes/claims reference is tracked separately in PR #6 and broader coverage remains planned. See roadmap issue #1.
 
 ## Roadmap
 
-The next increments are browser integration for the Graph builder, a searchable
-Entra attributes/claims reference, and explicitly authenticated Graph testing.
+The offline Graph builder is available in the browser and desktop source. The next
+increment is explicitly authenticated Graph testing, requiring tenant/account identification,
+least-privilege guidance, and an impact preview before mutations. The searchable Entra
+reference is tracked in PR #6 and needs broader, continuously verified coverage.
 Later analyst workflows cover app registrations/service principals, roles/consent,
 federation, SCIM/provisioning, certificates, Conditional Access, sign-in diagnostics,
 token comparison, and explicitly saved sanitized case workspaces.
