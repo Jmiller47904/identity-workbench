@@ -3,10 +3,12 @@ const { app, BrowserWindow, Menu, session, shell } = require('electron');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const entry = pathToFileURL(path.join(__dirname, '..', 'dist', 'index.html')).href;
-const allowedFiles = new Set(['index.html','app.js','style.css'].map(file => pathToFileURL(path.join(__dirname,'..','dist',file)).href));
+const allowedFiles = new Set(['index.html','app.js','style.css','graph-builder.js'].map(file => pathToFileURL(path.join(__dirname,'..','dist',file)).href));
 const externalLinks = new Set([
   'https://learn.microsoft.com/en-us/entra/identity-platform/access-token-claims-reference',
-  'https://docs.oasis-open.org/security/saml/v2.0/saml-core-2.0-os.pdf'
+  'https://docs.oasis-open.org/security/saml/v2.0/saml-core-2.0-os.pdf',
+  'https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0',
+  'https://learn.microsoft.com/en-us/graph/api/user-update?view=graph-rest-1.0'
 ]);
 function openWindow() {
   const win = new BrowserWindow({
