@@ -9,7 +9,8 @@ Inspect JWT and SAML 2.0 responses locally. Decode claims, compare expected audi
 | Local JWT/SAML inspection and Entra diagnostic clues | Available in the browser and desktop interface |
 | Graph request/JSON builder, permission and impact previews, PowerShell/cURL export | Available as an offline Node.js CLI/library developer preview |
 | B2B guest UPN targets, including encoded `#EXT#` identifiers | Supported by the Graph profile-update template |
-| Graph builder browser integration and searchable Entra attributes/claims reference | Planned |
+| Searchable Entra attributes/claims reference in browser and desktop UI | Available (curated starting set) |
+| Graph builder browser integration | Planned |
 | Authenticated Graph execution and tenant response diagnostics | Planned |
 
 The default branch can contain changes newer than published downloads. The Graph
@@ -21,6 +22,8 @@ and B2B target changes; those require the current source checkout. A merged chan
 does not automatically update an existing release.
 
 ## Recent updates
+
+- **October 31, 2026 — searchable Entra reference (proposed):** adds a local searchable cross-reference for common Graph user properties and related token claims. It distinguishes documented relationships from properties with no guaranteed direct claim mapping and links each entry to Microsoft Learn. Graph property names are from the v1.0 user resource; entries were checked October 31, 2026. Tenant permissions are needed only to query Graph, not to use the reference. It does not predict tenant output or validate tokens. [PR #6](https://github.com/Jmiller47904/identity-workbench/pull/6).
 
 - **October 19, 2026 — strict SAML time syntax (proposed):** SAML conditions
   reject impossible calendar dates and timezone-ambiguous timestamps instead of
@@ -49,7 +52,7 @@ does not automatically update an existing release.
 - Offline: download `Identity-Workbench-Offline.html` from [v0.2.0 release assets](https://github.com/Jmiller47904/identity-workbench/releases/tag/v0.2.0) and open it in a modern browser. For the current source version, run `npm run build:web` and open `web-release/Identity-Workbench-Offline.html`; the generated HTML is not included in the source checkout. No installation or connection is needed for inspection once the HTML is saved.
 - Desktop: Windows Setup and Portable executables, macOS DMG, and Linux AppImage are produced by the downloadable-clients workflow. These binaries are not included in the source archive until built. The desktop app bundles the complete interface locally; it does not load the hosted site.
 
-The input stays in page memory. No analytics, token uploads, token history, or browser storage. Documentation links open externally only when clicked. Clearing input or closing the window clears the application's in-memory results. The operating system may manage memory, crash dumps, or clipboard contents separately.
+The input stays in page memory. No analytics, token uploads, token history, or browser storage. The searchable Entra reference is bundled with the application and filters locally; its Microsoft Learn links open externally only when clicked. Other documentation links open externally only when clicked. Clearing input or closing the window clears the application's in-memory results. The operating system may manage memory, crash dumps, or clipboard contents separately.
 
 ## Development
 
@@ -112,13 +115,13 @@ Sources verified October 5, 2026:
 - [Get user](https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0): `/me` uses delegated `User.Read`.
 - [Update user](https://learn.microsoft.com/en-us/graph/api/user-update?view=graph-rest-1.0): the other-user profile template lists `User.ReadUpdate.All`; caller privileges, consent and synchronization/source-of-authority restrictions still apply.
 
-Next: browser integration and a searchable attributes/claims reference, followed
-by explicitly authenticated testing. See roadmap issue #1.
+Next: browser integration for the Graph request builder, followed by explicitly authenticated testing. The searchable attributes/claims reference is a curated starting set; broader coverage remains planned. See roadmap issue #1.
 
 ## Roadmap
 
-The next increments are browser integration for the Graph builder, a searchable
-Entra attributes/claims reference, and explicitly authenticated Graph testing.
+The next increments are browser integration for the Graph builder and explicitly
+authenticated Graph testing. The searchable Entra attributes/claims reference is
+available as a curated starting set and needs broader, continuously verified coverage.
 Later analyst workflows cover app registrations/service principals, roles/consent,
 federation, SCIM/provisioning, certificates, Conditional Access, sign-in diagnostics,
 token comparison, and explicitly saved sanitized case workspaces.

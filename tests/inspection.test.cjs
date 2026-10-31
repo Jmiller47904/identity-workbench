@@ -51,3 +51,19 @@ test('Malformed, encrypted and entity-bearing inputs fail without stale results'
 test('Offline build embeds exact scripts with matching CSP hashes',()=>{
  require('../scripts/build-web.cjs');const offline=fs.readFileSync('web-release/Identity-Workbench-Offline.html','utf8');const dom=new JSDOM(offline);const d=dom.window.document;const csp=d.querySelector('meta[http-equiv="Content-Security-Policy"]').content;for(const tag of ['script','style']){const content=d.querySelector(tag).textContent;const h=crypto.createHash('sha256').update(content).digest('base64');assert.ok(csp.includes("'sha256-"+h+"'"));}assert.equal(d.querySelector('script[src]'),null);assert.equal(d.querySelector('link[rel="stylesheet"]'),null);dom.window.close();
 });
+
+test('searchable Entra reference distinguishes directory properties from token claims',()=>{
+ const dom=setup(),d=dom.window.document;
+ assert.equal(d.querySelectorAll('#reference-rows tr').length,8);
+ assert.match(d.getElementById('reference-rows').textContent,/No guaranteed direct claim mapping/);
+ assert.equal(d.querySelectorAll('#reference-rows tr:first-child a').length,2);
+ assert.match(d.querySelector('#reference-rows tr:first-child a').href,/graph\/api\/resources\/user/);
+ assert.match(d.querySelector('#reference-rows tr:first-child a:last-of-type').href,/entra\/identity-platform/);
+ const search=d.getElementById('reference-search');search.value='jobTitle';search.dispatchEvent(new dom.window.Event('input',{bubbles:true}));
+ assert.equal(d.querySelectorAll('#reference-rows tr').length,1);
+ assert.match(d.getElementById('reference-rows').textContent,/No guaranteed built-in mapping/);
+ search.value='not-a-property';search.dispatchEvent(new dom.window.Event('input',{bubbles:true}));
+ assert.equal(d.querySelectorAll('#reference-rows tr').length,0);
+ assert.equal(d.getElementById('reference-empty').hidden,false);
+ dom.window.close();
+});

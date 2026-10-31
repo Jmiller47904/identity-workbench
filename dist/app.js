@@ -32,3 +32,30 @@ $('saml-sample').onclick=()=>{resetExpected();const now=Date.now();$('token').va
     <saml:AttributeStatement><saml:Attribute Name="role"><saml:AttributeValue>Reader</saml:AttributeValue></saml:Attribute><saml:Attribute Name="department"><saml:AttributeValue>Identity Engineering</saml:AttributeValue></saml:Attribute></saml:AttributeStatement>
   </saml:Assertion>
 </samlp:Response>`;inspect();};
+
+const entraGraphSource='https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0';
+const entraReference=[
+ {property:'displayName',type:'String',claim:'ID token: name',guidance:'The name claim is a display value. Treat it as presentation data, not a stable identifier; confirm the token type and configuration.',claimSource:'https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference',claimSourceLabel:'ID token claims'},
+ {property:'givenName',type:'String',claim:'ID token: given_name',guidance:'The given_name claim reflects the given name on the user object when included. Verify whether the application requests or receives this claim for the token type.',claimSource:'https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference',claimSourceLabel:'ID token claims'},
+ {property:'surname',type:'String',claim:'ID token: family_name',guidance:'The family_name claim reflects the surname on the user object when included. Verify token configuration and avoid using it as an identifier.',claimSource:'https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference',claimSourceLabel:'ID token claims'},
+ {property:'userPrincipalName',type:'String',claim:'Optional upn; preferred_username in v2 ID tokens',guidance:'UPN and preferred_username are not durable identifiers. Their presence and format vary by token version and configuration; do not assume they equal the sign-in name.',claimSource:'https://learn.microsoft.com/en-us/entra/identity-platform/optional-claims-reference',claimSourceLabel:'Optional claims reference'},
+ {property:'mail',type:'String',claim:'No guaranteed direct claim mapping',guidance:'Do not infer an email claim from mail. Email claims can be absent or differ; inspect the token and the application’s claim configuration.',claimSource:'https://learn.microsoft.com/en-us/entra/identity-platform/access-token-claims-reference',claimSourceLabel:'Access token claims'},
+ {property:'department',type:'String',claim:'No guaranteed built-in mapping',guidance:'A directory property does not automatically become a token claim. If required, verify an explicitly supported customization for the relevant token type.',claimSource:'https://learn.microsoft.com/en-us/entra/identity-platform/reference-claims-customization',claimSourceLabel:'Claims customization'},
+ {property:'jobTitle',type:'String',claim:'No guaranteed built-in mapping',guidance:'A directory property does not automatically become a token claim. Confirm supported claim customization and test the actual token in the target application.',claimSource:'https://learn.microsoft.com/en-us/entra/identity-platform/reference-claims-customization',claimSourceLabel:'Claims customization'},
+ {property:'id',type:'String (GUID)',claim:'oid (object identifier)',guidance:'The object identifier identifies the directory object within its tenant context. Validate tenant context too; do not substitute a display name or UPN.',claimSource:'https://learn.microsoft.com/en-us/entra/identity-platform/access-token-claims-reference',claimSourceLabel:'Access token claims'}
+];
+function renderReference(query=''){
+ const normalized=query.trim().toLocaleLowerCase();
+ const matches=entraReference.filter(x=>Object.values(x).some(v=>String(v).toLocaleLowerCase().includes(normalized)));
+ $('reference-rows').replaceChildren(...matches.map(x=>{
+  const row=document.createElement('tr');
+  const property=node('td','reference-property',x.property);property.append(node('span','reference-type',x.type));
+  const claim=node('td','reference-claim',x.claim);const guidance=node('td','',x.guidance);
+  const source=node('td');for(const [href,label] of [[entraGraphSource,'Graph v1.0'],[x.claimSource,x.claimSourceLabel]]){const link=document.createElement('a');link.href=href;link.target='_blank';link.rel='noreferrer';link.textContent=label+' ↗';source.append(link,document.createElement('br'));}
+  row.append(property,claim,guidance,source);return row;
+ }));
+ $('reference-count').textContent=matches.length+' of '+entraReference.length+' entries';
+ $('reference-empty').hidden=matches.length!==0;
+}
+renderReference();
+$('reference-search').addEventListener('input',e=>renderReference(e.target.value));
