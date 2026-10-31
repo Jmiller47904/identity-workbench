@@ -7,6 +7,7 @@ Inspect JWT and SAML 2.0 responses locally. Decode claims, compare expected audi
 | Capability | Status |
 | --- | --- |
 | Local JWT/SAML inspection and Entra diagnostic clues | Available in the browser and desktop interface |
+| Local OAuth/OIDC authorization-error response diagnosis | Available in the browser and desktop UI |
 | Graph request/JSON builder, permission and impact previews, PowerShell/cURL export, local response explanations | Available in the browser, desktop UI, and offline Node.js CLI/library |
 | B2B guest UPN targets, including encoded `#EXT#` identifiers | Supported by the Graph profile-update template |
 | Searchable Entra attributes/claims reference in browser and desktop UI | Available (curated starting set) |
@@ -20,6 +21,8 @@ Linux AppImage, and standalone offline HTML. It predates the October Graph build
 does not automatically update an existing release.
 
 ## Recent updates
+
+- **October 31, 2026 — local OAuth/OIDC error diagnostics:** recognizes authorization error callbacks and OAuth error JSON, surfaces documented error and correlation fields, and can compare returned state locally. Successful callback codes and token responses are rejected. It does not authenticate or send requests. [PR #8](https://github.com/Jmiller47904/identity-workbench/pull/8).
 
 - **October 31, 2026 — browser Graph workbench:** brings the existing offline templates into the browser and desktop UI for local request previews, JSON, PowerShell, and cURL exports, and adds a local explainer for pasted Graph status/body data. It sends no requests and does not accept credentials. [PR #7](https://github.com/Jmiller47904/identity-workbench/pull/7).
 
@@ -52,7 +55,7 @@ does not automatically update an existing release.
 - Offline: download `Identity-Workbench-Offline.html` from [v0.2.0 release assets](https://github.com/Jmiller47904/identity-workbench/releases/tag/v0.2.0) and open it in a modern browser. For the current source version, run `npm run build:web` and open `web-release/Identity-Workbench-Offline.html`; the generated HTML is not included in the source checkout. No installation or connection is needed for inspection once the HTML is saved.
 - Desktop: Windows Setup and Portable executables, macOS DMG, and Linux AppImage are produced by the downloadable-clients workflow. These binaries are not included in the source archive until built. The desktop app bundles the complete interface locally; it does not load the hosted site.
 
-The input stays in page memory. No analytics, token uploads, token history, or browser storage. Documentation links open externally only when clicked. Clearing input or closing the window clears the application's in-memory results. The operating system may manage memory, crash dumps, or clipboard contents separately.
+The input stays in page memory. No analytics, token uploads, token history, or browser storage. Documentation links open externally only when clicked. Clearing input or closing the window clears the application's in-memory input, expected values, and results. The operating system may manage memory, crash dumps, or clipboard contents separately.
 
 ## Development
 
@@ -79,9 +82,13 @@ Desktop packages are unsigned unless code signing is configured. Windows/macOS c
 
 ## Scope and limits
 
-Supports raw JWT (including Bearer prefix), raw SAML XML, Base64 SAML, and SAMLResponse form values. Encrypted JWE/SAML and multiple assertions are rejected. JWT time claims must decode to finite numeric seconds; malformed or overflowing values are not evaluated as valid dates. SAML condition times use a strict supported subset of XML `dateTime`: a four-digit year, real calendar date, seconds, optional fractional seconds, and explicit `Z` or numeric timezone (up to ±14:00). Time checks use the device clock with no skew allowance. SAML inspection is namespace-aware but does not implement full schema or profile validation. Token claims remain untrusted even if expected strings match.
+Supports raw JWT (including Bearer prefix), raw SAML XML, Base64 SAML, SAMLResponse form values, and OAuth/OIDC error callbacks or JSON error objects. The OAuth/OIDC view rejects successful responses containing authorization codes or tokens; it does not authenticate or follow error URIs. It displays provider error descriptions as untrusted developer text and never uses them as a programmatic error key. An optional state comparison checks exact strings locally; it does not establish CSRF protection or validate a complete authentication flow. Encrypted JWE/SAML and multiple assertions are rejected. JWT time claims must decode to finite numeric seconds; malformed or overflowing values are not evaluated as valid dates. SAML condition times use a strict supported subset of XML `dateTime`: a four-digit year, real calendar date, seconds, optional fractional seconds, and explicit `Z` or numeric timezone (up to ±14:00). Time checks use the device clock with no skew allowance. SAML inspection is namespace-aware but does not implement full schema or profile validation. Token claims remain untrusted even if expected strings match.
 
 Synthetic examples contain no real identities or credentials. Never commit production tokens to examples, tests, issues, or build logs.
+
+OAuth/OIDC error handling verified October 31, 2026:
+- [Microsoft identity platform authorization-code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow): authorization errors can be returned to the redirect URI with error details; when state was sent, the client should verify the returned state.
+- [Microsoft Entra authentication and authorization error codes](https://learn.microsoft.com/en-us/entra/identity-platform/reference-error-codes): use the error code to classify failures; error descriptions and trace/correlation fields support developer diagnostics.
 
 ## Graph request workbench (offline preview)
 
