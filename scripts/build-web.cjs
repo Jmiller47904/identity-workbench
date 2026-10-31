@@ -5,16 +5,17 @@ const crypto = require('node:crypto');
 const root = path.resolve(__dirname,'..');
 const output = path.join(root,'web-release');
 fs.mkdirSync(output,{recursive:true});
-for (const file of ['index.html','style.css','app.js']) fs.copyFileSync(path.join(root,'dist',file),path.join(output,file));
+for (const file of ['index.html','style.css','app.js','graph-builder.js']) fs.copyFileSync(path.join(root,'dist',file),path.join(output,file));
 fs.writeFileSync(path.join(output,'.nojekyll'),'');
 // A downloadable, self-contained HTML app uses CSP hashes, not unsafe-inline.
 const css = fs.readFileSync(path.join(root,'dist/style.css'),'utf8').replace(/\r\n?/g,'\n');
 const js = fs.readFileSync(path.join(root,'dist/app.js'),'utf8').replace(/\r\n?/g,'\n');
+const graphJs = fs.readFileSync(path.join(root,'dist/graph-builder.js'),'utf8').replace(/\r\n?/g,'\n');
 const hash = text => crypto.createHash('sha256').update(text).digest('base64');
 let html = fs.readFileSync(path.join(root,'dist/index.html'),'utf8');
-html = html.replace("script-src 'self'",`script-src 'sha256-${hash(js)}'`).replace("style-src 'self'",`style-src 'sha256-${hash(css)}'`)
+html = html.replace("script-src 'self'",`script-src 'sha256-${hash(graphJs)}' 'sha256-${hash(js)}'`).replace("style-src 'self'",`style-src 'sha256-${hash(css)}'`)
   .replace('<link rel="stylesheet" href="style.css">',()=>`<style>${css}</style>`)
-  .replace('<script src="app.js"></script>',()=>`<script>${js}</script>`);
+  .replace('<script src="graph-builder.js"></script><script src="app.js"></script>',()=>`<script>${graphJs}</script><script>${js}</script>`);
 fs.writeFileSync(path.join(output,'Identity-Workbench-Offline.html'),html);
 let web = fs.readFileSync(path.join(output,'index.html'),'utf8');
 web = web.replace('<span class="local">', '<a class="offline-download" href="Identity-Workbench-Offline.html" download>Download offline app ↓</a><span class="local">');

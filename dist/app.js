@@ -32,3 +32,168 @@ $('saml-sample').onclick=()=>{resetExpected();const now=Date.now();$('token').va
     <saml:AttributeStatement><saml:Attribute Name="role"><saml:AttributeValue>Reader</saml:AttributeValue></saml:Attribute><saml:Attribute Name="department"><saml:AttributeValue>Identity Engineering</saml:AttributeValue></saml:Attribute></saml:AttributeStatement>
   </saml:Assertion>
 </samlp:Response>`;inspect();};
+
+const graphBuilder=globalThis.IdentityGraphBuilder;
+let currentGraphRequest=null;
+function invalidateGraphPreview(){
+ currentGraphRequest=null;
+ $('graph-result').hidden=true;
+ $('graph-error').textContent='';
+ $('graph-export-output').value='';
+}
+function syncGraphTemplate(){
+ const updating=$('graph-template').value==='update-user-profile';
+ $('graph-user-field').hidden=!updating;
+ $('graph-body-field').hidden=!updating;
+ $('graph-select-field').hidden=updating;
+}
+function selectedGraphFields(){
+ const value=$('graph-select').value.trim();
+ return value ? value.split(',').map(item=>item.trim()).filter(Boolean) : undefined;
+}
+function buildGraphPreview(){
+ invalidateGraphPreview();
+ try{
+  const template=$('graph-template').value;
+  const request=graphBuilder.buildRequest({
+   template,
+   authMode:$('graph-auth-mode').value,
+   ...(template==='update-user-profile'?{userId:$('graph-user-id').value.trim(),body:$('graph-body').value}:{select:selectedGraphFields()})
+  });
+  $('graph-method').textContent=request.method;
+  $('graph-url').textContent=request.url;
+  $('graph-version').textContent=request.documentation.apiVersion;
+  $('graph-permissions').textContent=request.authMode+': '+(request.permissions.length?request.permissions.join(', '):'none listed');
+  $('graph-impact').textContent=request.impact;
+  $('graph-limitations').textContent=request.limitations.join(' ');
+  const documentation=$('graph-documentation');
+  documentation.href=request.documentation.source;
+  $('graph-preview-body-wrap').hidden=!request.body;
+  $('graph-preview-body').textContent=request.body?JSON.stringify(request.body,null,2):'';
+  $('graph-export-output').value=graphBuilder.exportRequest(request,'json');
+  currentGraphRequest=request;
+  $('graph-result').hidden=false;
+  $('graph-result').dataset.template=template;
+  $('graph-result').dataset.authMode=request.authMode;
+ }catch(error){
+  $('graph-error').textContent=error.message;
+ }
+}
+$('graph-template').addEventListener('change',()=>{syncGraphTemplate();invalidateGraphPreview();});
+$('graph-auth-mode').addEventListener('change',invalidateGraphPreview);
+for(const id of ['graph-user-id','graph-select','graph-body'])$(id).addEventListener('input',invalidateGraphPreview);
+$('graph-preview-button').addEventListener('click',buildGraphPreview);
+$('graph-clear-button').addEventListener('click',()=>{
+ $('graph-template').value='get-me';$('graph-auth-mode').value='delegated';$('graph-user-id').value='';
+ $('graph-select').value='';$('graph-body').value='{"department":"Identity","jobTitle":"Analyst"}';
+ $('graph-export-output').value='';$('graph-error').textContent='';invalidateGraphPreview();syncGraphTemplate();
+});
+document.querySelectorAll('[data-graph-export]').forEach(button=>button.addEventListener('click',()=>{
+ if($('graph-result').hidden||!currentGraphRequest)return;
+ try{
+  $('graph-export-output').value=graphBuilder.exportRequest(currentGraphRequest,button.dataset.graphExport);
+ }catch(error){$('graph-error').textContent=error.message;$('graph-result').hidden=true;}
+}));
+syncGraphTemplate();
+
+function graphResponseGuidance(status, retryAfter, response) {
+ const findings=[];
+ const add=(level,title,body)=>findings.push({level,title,body});
+ const error=response?.error && typeof response.error==='object' && !Array.isArray(response.error)
+  ? response.error : null;
+ if(status===429){
+  add('issue','Microsoft Graph throttled this request (429)',
+   retryAfter
+    ? 'Do not retry immediately. Wait for the supplied Retry-After value ('+retryAfter+') before retrying; reduce call frequency or operations per request.'
+    : 'Do not retry immediately. Microsoft recommends exponential backoff when Retry-After is absent; reduce call frequency or operations per request.');
+ }else if(status===503){
+  add('warn','Microsoft Graph is temporarily unavailable (503)',
+   retryAfter
+    ? 'Wait for the supplied Retry-After value ('+retryAfter+') before retrying.'
+    : 'The service may be unavailable or overloaded. Delay retries and follow endpoint-specific guidance.');
+ }else if(status===401){
+  add('issue','Authentication was not accepted (401)',
+   'Check that the request used a valid access token intended for Microsoft Graph and the expected authentication flow. This local explainer does not inspect tokens or tenant configuration.');
+ }else if(status===403){
+  add('issue','Access was denied (403)',
+   'Check the endpoint permission and consent, and whether the signed-in user can access the target. A granted permission does not by itself establish that the user has the required privilege.');
+ }else if(status===404){
+  add('warn','Resource or route was not found (404)',
+   'Check the documented endpoint and API version, and confirm the target identifier and resource are correct for this tenant.');
+ }else if(status===400||status===422){
+  add('warn','Request was rejected ('+status+')',
+   'Compare the endpoint, API version, query parameters, headers, and JSON body with that API’s documentation. The structured Graph error code may provide more specific context.');
+ }else if(status>=500){
+  add('warn','Microsoft Graph returned a server error ('+status+')',
+   'Inspect the structured error details and request ID. Retry behavior depends on the endpoint and any Retry-After guidance.');
+ }else if(status>=400){
+  add('warn','Microsoft Graph returned HTTP '+status,
+   'Use the HTTP status and structured error code as diagnostic context. Handling depends on the endpoint and tenant configuration.');
+ }else if(status>=200&&status<300){
+  add('info','Successful HTTP status',
+   'The response status is in the success range. This tool does not validate the response contents or confirm an operation’s intended effect.');
+ }else{
+  add('info','HTTP status '+status,
+   'Use the status and structured error details as context; handling depends on the endpoint.');
+ }
+ if((status===429||status===503)&&!retryAfter)
+  add('info','No Retry-After value supplied',
+   status===429
+    ? 'Microsoft recommends exponential backoff when a throttled response has no Retry-After header.'
+    : 'Check the endpoint documentation for retry behavior when no delay is supplied.');
+ if(error){
+  if(typeof error.code==='string')add('info','Graph error code',error.code);
+  if(typeof error.message==='string')add('info','Graph error message',error.message);
+  const inner=error.innerError&&typeof error.innerError==='object'?error.innerError:null;
+  if(inner&&typeof inner.code==='string')add('info','Inner error code',inner.code);
+  if(inner&&typeof inner['request-id']==='string')add('info','Request ID',inner['request-id']);
+  else if(typeof error['request-id']==='string')add('info','Request ID',error['request-id']);
+ }
+ if(response&&typeof response['@odata.nextLink']==='string'&&response['@odata.nextLink']){
+  add('info','Another page is available',
+   'This response includes @odata.nextLink. Use the complete URL exactly as returned and treat it as opaque; this tool will not follow it. For directory pages, resend any required custom headers because they are not included by default on subsequent requests.');
+ }
+ return findings;
+}
+function invalidateGraphResponse(){
+ $('graph-response-result').hidden=true;
+ $('graph-response-result').replaceChildren();
+ $('graph-response-error').textContent='';
+}
+function explainGraphResponse(){
+ invalidateGraphResponse();
+ try{
+  const statusText=$('graph-response-status').value.trim();
+  const status=Number(statusText);
+  if(!statusText||!Number.isInteger(status)||status<100||status>599)
+   throw Error('Enter an HTTP status code from 100 to 599.');
+  const raw=$('graph-response-body').value;
+  if(raw.length>500000)throw Error('Response JSON exceeds the 500 KB local inspection limit.');
+  let response=null;
+  if(raw.trim()){
+   try{response=JSON.parse(raw);}catch{throw Error('Response body must be valid JSON or empty.');}
+   if(!response||typeof response!=='object'||Array.isArray(response))
+    throw Error('Response JSON must be an object.');
+  }
+  const findings=graphResponseGuidance(status,$('graph-response-retry').value.trim(),response);
+  const result=$('graph-response-result');
+  result.replaceChildren(...findings.map(f=>{
+   const row=node('div','finding');
+   const body=node('div');
+   body.append(node('b','',f.title),node('p','',f.body));
+   row.append(node('span','severity '+f.level,f.level.toUpperCase()),body);
+   return row;
+  }));
+  result.hidden=false;
+ }catch(error){$('graph-response-error').textContent=error.message;}
+}
+$('graph-response-explain').addEventListener('click',explainGraphResponse);
+for(const id of ['graph-response-status','graph-response-retry','graph-response-body'])
+ $(id).addEventListener('input',invalidateGraphResponse);
+$('graph-response-clear').addEventListener('click',()=>{
+ $('graph-response-status').value='';
+ $('graph-response-retry').value='';
+ $('graph-response-body').value='';
+ invalidateGraphResponse();
+ $('graph-response-status').focus();
+});

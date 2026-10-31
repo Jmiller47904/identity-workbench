@@ -23,7 +23,7 @@
     "appId": "com.sirslautty.identityworkbench",
     "productName": "Identity Workbench",
     "directories": {"output": "release"},
-    "files": ["electron/**", "dist/index.html", "dist/app.js", "dist/style.css", "package.json"],
+    "files": ["electron/**", "dist/index.html", "dist/app.js", "dist/graph-builder.js", "dist/style.css", "package.json"],
     "asar": true,
     "publish": null,
     "win": {"target": ["nsis", "portable"], "signAndEditExecutable": false},
