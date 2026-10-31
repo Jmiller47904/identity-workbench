@@ -9,7 +9,7 @@ Inspect JWT and SAML 2.0 responses locally. Decode claims, compare expected audi
 | Local JWT/SAML inspection and Entra diagnostic clues | Available in the browser and desktop interface |
 | Graph request/JSON builder, permission and impact previews, PowerShell/cURL export, local response explanations | Available in the browser, desktop UI, and offline Node.js CLI/library |
 | B2B guest UPN targets, including encoded `#EXT#` identifiers | Supported by the Graph profile-update template |
-| Searchable Entra attributes/claims reference | Planned (tracked in PR #6) |
+| Searchable Entra attributes/claims reference in browser and desktop UI | Available (curated starting set) |
 | Authenticated Graph execution and tenant response diagnostics | Planned |
 
 The default branch can contain changes newer than published downloads. The Graph
@@ -21,7 +21,9 @@ does not automatically update an existing release.
 
 ## Recent updates
 
-- **October 31, 2026 — browser Graph workbench (proposed):** brings the existing offline templates into the browser and desktop UI for local request previews, JSON, PowerShell, and cURL exports, and adds a local explainer for pasted Graph status/body data. It sends no requests and does not accept credentials. [PR #7](https://github.com/Jmiller47904/identity-workbench/pull/7).
+- **October 31, 2026 — browser Graph workbench:** brings the existing offline templates into the browser and desktop UI for local request previews, JSON, PowerShell, and cURL exports, and adds a local explainer for pasted Graph status/body data. It sends no requests and does not accept credentials. [PR #7](https://github.com/Jmiller47904/identity-workbench/pull/7).
+
+- **October 31, 2026 — searchable Entra reference:** adds a local cross-reference for eight common Graph user properties and related token claims. It distinguishes documented relationships from properties with no guaranteed direct claim mapping and links each entry to Microsoft Learn. The curated reference does not predict tenant output or validate tokens. [PR #6](https://github.com/Jmiller47904/identity-workbench/pull/6).
 
 - **October 19, 2026 — strict SAML time syntax (proposed):** SAML conditions
   reject impossible calendar dates and timezone-ambiguous timestamps instead of
@@ -41,7 +43,7 @@ does not automatically update an existing release.
 - **October 1, 2026 — Offline Graph builder:** added documented `get-me` and
   `update-user-profile` templates, local JSON checks, permission/impact previews,
   and PowerShell/cURL exports with focused tests. [PR #2](https://github.com/Jmiller47904/identity-workbench/pull/2).
-  This increment does not execute Graph requests; browser controls are proposed separately in [PR #7](https://github.com/Jmiller47904/identity-workbench/pull/7).
+  This increment does not execute Graph requests; browser controls are available in the workbench described above.
 - **October 2026 — Expanded product direction:** established the daily analyst
   companion roadmap, feature priorities, and longer-term module/product boundaries.
 
@@ -134,14 +136,13 @@ Response guidance verified October 31, 2026:
 - [Microsoft Graph throttling](https://learn.microsoft.com/en-us/graph/throttling): honor Retry-After for HTTP 429; if absent, use exponential backoff and avoid immediate retries.
 - [Microsoft Graph paging](https://learn.microsoft.com/en-us/graph/paging): use the complete @odata.nextLink URL as an opaque value; custom headers other than Authorization and Content-Type aren't carried to subsequent requests by default.
 
-Next: explicitly authenticated testing with tenant/account identification, least-privilege guidance, and an impact preview before mutations. The searchable attributes/claims reference is tracked separately in PR #6 and broader coverage remains planned. See roadmap issue #1.
+Next: explicitly authenticated testing with tenant/account identification, least-privilege guidance, and an impact preview before mutations. The searchable Entra reference is available as a curated starting set; broader coverage remains planned. See roadmap issue #1.
 
 ## Roadmap
 
 The offline Graph builder is available in the browser and desktop source. The next
 increment is explicitly authenticated Graph testing, requiring tenant/account identification,
-least-privilege guidance, and an impact preview before mutations. The searchable Entra
-reference is tracked in PR #6 and needs broader, continuously verified coverage.
+least-privilege guidance, and an impact preview before mutations. The searchable Entra reference is available as a curated starting set and needs broader, continuously verified coverage.
 Later analyst workflows cover app registrations/service principals, roles/consent,
 federation, SCIM/provisioning, certificates, Conditional Access, sign-in diagnostics,
 token comparison, and explicitly saved sanitized case workspaces.
