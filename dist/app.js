@@ -32,3 +32,66 @@ $('saml-sample').onclick=()=>{resetExpected();const now=Date.now();$('token').va
     <saml:AttributeStatement><saml:Attribute Name="role"><saml:AttributeValue>Reader</saml:AttributeValue></saml:Attribute><saml:Attribute Name="department"><saml:AttributeValue>Identity Engineering</saml:AttributeValue></saml:Attribute></saml:AttributeStatement>
   </saml:Assertion>
 </samlp:Response>`;inspect();};
+
+const graphBuilder=globalThis.IdentityGraphBuilder;
+let currentGraphRequest=null;
+function invalidateGraphPreview(){
+ currentGraphRequest=null;
+ $('graph-result').hidden=true;
+ $('graph-error').textContent='';
+ $('graph-export-output').value='';
+}
+function syncGraphTemplate(){
+ const updating=$('graph-template').value==='update-user-profile';
+ $('graph-user-field').hidden=!updating;
+ $('graph-body-field').hidden=!updating;
+ $('graph-select-field').hidden=updating;
+}
+function selectedGraphFields(){
+ const value=$('graph-select').value.trim();
+ return value ? value.split(',').map(item=>item.trim()).filter(Boolean) : undefined;
+}
+function buildGraphPreview(){
+ invalidateGraphPreview();
+ try{
+  const template=$('graph-template').value;
+  const request=graphBuilder.buildRequest({
+   template,
+   authMode:$('graph-auth-mode').value,
+   ...(template==='update-user-profile'?{userId:$('graph-user-id').value.trim(),body:$('graph-body').value}:{select:selectedGraphFields()})
+  });
+  $('graph-method').textContent=request.method;
+  $('graph-url').textContent=request.url;
+  $('graph-version').textContent=request.documentation.apiVersion;
+  $('graph-permissions').textContent=request.authMode+': '+(request.permissions.length?request.permissions.join(', '):'none listed');
+  $('graph-impact').textContent=request.impact;
+  $('graph-limitations').textContent=request.limitations.join(' ');
+  const documentation=$('graph-documentation');
+  documentation.href=request.documentation.source;
+  $('graph-preview-body-wrap').hidden=!request.body;
+  $('graph-preview-body').textContent=request.body?JSON.stringify(request.body,null,2):'';
+  $('graph-export-output').value=graphBuilder.exportRequest(request,'json');
+  currentGraphRequest=request;
+  $('graph-result').hidden=false;
+  $('graph-result').dataset.template=template;
+  $('graph-result').dataset.authMode=request.authMode;
+ }catch(error){
+  $('graph-error').textContent=error.message;
+ }
+}
+$('graph-template').addEventListener('change',()=>{syncGraphTemplate();invalidateGraphPreview();});
+$('graph-auth-mode').addEventListener('change',invalidateGraphPreview);
+for(const id of ['graph-user-id','graph-select','graph-body'])$(id).addEventListener('input',invalidateGraphPreview);
+$('graph-preview-button').addEventListener('click',buildGraphPreview);
+$('graph-clear-button').addEventListener('click',()=>{
+ $('graph-template').value='get-me';$('graph-auth-mode').value='delegated';$('graph-user-id').value='';
+ $('graph-select').value='';$('graph-body').value='{"department":"Identity","jobTitle":"Analyst"}';
+ $('graph-export-output').value='';$('graph-error').textContent='';invalidateGraphPreview();syncGraphTemplate();
+});
+document.querySelectorAll('[data-graph-export]').forEach(button=>button.addEventListener('click',()=>{
+ if($('graph-result').hidden||!currentGraphRequest)return;
+ try{
+  $('graph-export-output').value=graphBuilder.exportRequest(currentGraphRequest,button.dataset.graphExport);
+ }catch(error){$('graph-error').textContent=error.message;$('graph-result').hidden=true;}
+}));
+syncGraphTemplate();
