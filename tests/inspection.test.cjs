@@ -45,6 +45,67 @@ test('SAML conditions reject normalized and timezone-ambiguous dates',()=>{
  }
  dom.window.close();
 });
+test('OIDC authorization error callback explains interaction and compares state locally',()=>{
+ const dom=setup(),d=dom.window.document;
+ d.getElementById('token').value='https://login.example.test/callback?error=interaction_required&error_description=%3Cimg+src%3Dx+onerror%3Dalert(1)%3E&state=expected-state&trace_id=synthetic-trace';
+ d.getElementById('expected-oauth-state').value='expected-state';
+ d.getElementById('analyze').click();
+ assert.equal(d.getElementById('error').textContent,'');
+ assert.equal(d.getElementById('format').textContent,'OAuth/OIDC error');
+ const diagnostics=d.getElementById('diagnostics');
+ assert.match(diagnostics.textContent,/additional user interaction or consent/);
+ assert.match(diagnostics.textContent,/State matches/);
+ assert.match(d.getElementById('claims').textContent,/synthetic-trace/);
+ assert.equal(diagnostics.querySelector('img'),null);
+ assert.equal(d.querySelector('#claims a'),null);
+ assert.match(diagnostics.textContent,/does not retry or perform authentication/);
+ dom.window.close();
+});
+test('OIDC error JSON preserves diagnostics as text and flags a state mismatch',()=>{
+ const dom=setup(),d=dom.window.document;
+ d.getElementById('token').value=JSON.stringify({
+  error:'invalid_scope',error_description:'<svg onload=alert(1)>',
+  error_codes:[70011],timestamp:'2026-10-31T00:00:00Z',
+  trace_id:'synthetic-trace',correlation_id:'synthetic-correlation',
+  error_uri:'https://login.example.test/error'
+ });
+ d.getElementById('expected-oauth-state').value='expected-state';
+ d.getElementById('analyze').click();
+ assert.equal(d.getElementById('format').textContent,'OAuth/OIDC error');
+ assert.match(d.getElementById('diagnostics').textContent,/Requested scope was rejected/);
+ assert.match(d.getElementById('diagnostics').textContent,/State value is missing/);
+ assert.match(d.getElementById('claims').textContent,/synthetic-correlation/);
+ assert.equal(d.querySelector('#claims svg'),null);
+ assert.equal(d.querySelector('#claims a'),null);
+ assert.match(d.getElementById('raw').textContent,/error_uri/);
+ assert.doesNotMatch(d.getElementById('raw').textContent,/access_token|authorization_code/);
+ dom.window.close();
+});
+test('OIDC error handling rejects successful callback secrets and clear resets expected state',()=>{
+ const dom=setup(),d=dom.window.document;
+ d.getElementById('token').value='https://app.example.test/callback?code=synthetic-authorization-code&state=synthetic-state';
+ d.getElementById('analyze').click();
+ assert.match(d.getElementById('error').textContent,/error responses only/);
+ assert.doesNotMatch(d.getElementById('error').textContent,/synthetic-authorization-code/);
+ d.getElementById('oidc-sample').click();
+ assert.equal(d.getElementById('format').textContent,'OAuth/OIDC error');
+ d.getElementById('clear').click();
+ assert.equal(d.getElementById('token').value,'');
+ assert.equal(d.getElementById('expected-oauth-state').value,'');
+ assert.equal(d.getElementById('results').hidden,true);
+ dom.window.close();
+});
+test('Changing an expected OIDC state invalidates a displayed comparison',()=>{
+ const dom=setup(),d=dom.window.document;
+ d.getElementById('oidc-sample').click();
+ assert.equal(d.getElementById('results').hidden,false);
+ d.getElementById('expected-oauth-state').value='changed-state';
+ d.getElementById('expected-oauth-state').dispatchEvent(new dom.window.Event('input',{bubbles:true}));
+ assert.equal(d.getElementById('results').hidden,true);
+ assert.equal(d.getElementById('format').textContent,'READY');
+ assert.equal(d.getElementById('claims').textContent,'');
+ dom.window.close();
+});
 test('Malformed, encrypted and entity-bearing inputs fail without stale results',()=>{
  const dom=setup(),d=dom.window.document;for(const input of ['a.b.c.d.e','<broken>','<!DOCTYPE a [<!ENTITY x SYSTEM "file:///etc/passwd">]><a>&x;</a>']){d.getElementById('jwt-sample').click();d.getElementById('token').value=input;d.getElementById('analyze').click();assert.notEqual(d.getElementById('error').textContent,'');assert.equal(d.getElementById('results').hidden,true);}dom.window.close();
 });
