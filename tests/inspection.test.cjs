@@ -34,6 +34,21 @@ test('SAML sample decodes raw XML and Base64 form values',()=>{
  const dom=setup(),d=dom.window.document;d.getElementById('saml-sample').click();assert.equal(d.getElementById('error').textContent,'');assert.equal(d.getElementById('format').textContent,'SAML 2.0');assert.match(d.getElementById('claims').textContent,/Identity Engineering/);
  const xml=d.getElementById('token').value;d.getElementById('token').value=new URLSearchParams({SAMLResponse:Buffer.from(xml).toString('base64')}).toString();d.getElementById('audience').value='urn:example:app';d.getElementById('recipient').value='https://wrong.example.com';d.getElementById('analyze').click();assert.equal(d.getElementById('error').textContent,'');assert.match(d.getElementById('diagnostics').textContent,/Audience matches/);assert.match(d.getElementById('diagnostics').textContent,/Recipient mismatch/);dom.window.close();
 });
+test('SAML recipient comparison treats SubjectConfirmation entries as alternatives',()=>{
+ const dom=setup(),d=dom.window.document;
+ d.getElementById('saml-sample').click();
+ const xml=d.getElementById('token').value;
+ const expiry=xml.match(/<saml:SubjectConfirmationData Recipient="https:\/\/app\.example\.com\/saml\/acs" NotOnOrAfter="([^"]+)"/)[1];
+ const alternative='<saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer"><saml:SubjectConfirmationData Recipient="https://other.example.com/saml/acs" NotOnOrAfter="'+expiry+'"/></saml:SubjectConfirmation>';
+ d.getElementById('token').value=xml.replace('</saml:Subject>',alternative+'</saml:Subject>');
+ d.getElementById('recipient').value='https://app.example.com/saml/acs';
+ d.getElementById('analyze').click();
+ const diagnostics=d.getElementById('diagnostics').textContent;
+ assert.match(diagnostics,/Recipient matches/);
+ assert.match(diagnostics,/At least one SubjectConfirmationData recipient matches/);
+ assert.doesNotMatch(diagnostics,/Recipient mismatch/);
+ dom.window.close();
+});
 test('Multiple SAML audience restrictions all must match',()=>{
  const dom=setup(),d=dom.window.document;d.getElementById('saml-sample').click();d.getElementById('token').value=d.getElementById('token').value.replace('</saml:Conditions>','<saml:AudienceRestriction><saml:Audience>urn:other</saml:Audience></saml:AudienceRestriction></saml:Conditions>');d.getElementById('audience').value='urn:example:app';d.getElementById('analyze').click();assert.match(d.getElementById('diagnostics').textContent,/Audience mismatch/);dom.window.close();
 });
