@@ -162,7 +162,7 @@ test('Graph response explainer diagnoses access denial and clears stale input/re
 
 test('searchable Entra reference distinguishes directory properties from token claims',()=>{
  const dom=setup(),d=dom.window.document;
- assert.equal(d.querySelectorAll('#reference-rows tr').length,8);
+ assert.equal(d.querySelectorAll('#reference-rows tr').length,11);
  assert.match(d.getElementById('reference-rows').textContent,/No guaranteed direct claim mapping/);
  assert.equal(d.querySelectorAll('#reference-rows tr:first-child a').length,2);
  assert.match(d.querySelector('#reference-rows tr:first-child a').href,/graph\/api\/resources\/user/);
@@ -176,6 +176,26 @@ test('searchable Entra reference distinguishes directory properties from token c
  dom.window.close();
 });
 
+test('Entra reference includes core account and workforce properties without promising token claims',()=>{
+ const dom=setup(),d=dom.window.document;
+ const search=d.getElementById('reference-search');
+ for(const [property,type,claim] of [
+  ['accountEnabled','Boolean','No guaranteed direct claim mapping'],
+  ['employeeId','String','No guaranteed direct claim mapping'],
+  ['userType','String','No guaranteed direct claim mapping']
+ ]){
+  search.value=property;
+  search.dispatchEvent(new dom.window.Event('input',{bubbles:true}));
+  const rows=d.querySelectorAll('#reference-rows tr');
+  assert.equal(rows.length,1);
+  assert.match(rows[0].textContent,new RegExp(property));
+  assert.match(rows[0].textContent,new RegExp(type));
+  assert.match(rows[0].textContent,new RegExp(claim));
+  assert.match(rows[0].querySelector('a').href,/graph\/api\/resources\/user\?view=graph-rest-1.0/);
+  assert.match(rows[0].querySelector('a:last-of-type').href,/reference-claims-customization/);
+ }
+ dom.window.close();
+});
 test('OIDC authorization error callback explains interaction and compares state locally',()=>{
  const dom=setup(),d=dom.window.document;
  d.getElementById('token').value='https://login.example.test/callback?error=interaction_required&error_description=%3Cimg+src%3Dx+onerror%3Dalert(1)%3E&state=expected-state&trace_id=synthetic-trace';
