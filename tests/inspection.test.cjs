@@ -56,7 +56,9 @@ test('searchable Entra reference distinguishes directory properties from token c
  const dom=setup(),d=dom.window.document;
  assert.equal(d.querySelectorAll('#reference-rows tr').length,8);
  assert.match(d.getElementById('reference-rows').textContent,/No guaranteed direct claim mapping/);
- assert.match(d.querySelector('#reference-rows a').href,/learn\.microsoft\.com/);
+ assert.equal(d.querySelectorAll('#reference-rows tr:first-child a').length,2);
+ assert.match(d.querySelector('#reference-rows tr:first-child a').href,/graph\/api\/resources\/user/);
+ assert.match(d.querySelector('#reference-rows tr:first-child a:last-of-type').href,/entra\/identity-platform/);
  const search=d.getElementById('reference-search');search.value='jobTitle';search.dispatchEvent(new dom.window.Event('input',{bubbles:true}));
  assert.equal(d.querySelectorAll('#reference-rows tr').length,1);
  assert.match(d.getElementById('reference-rows').textContent,/No guaranteed built-in mapping/);
