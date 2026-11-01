@@ -1,10 +1,10 @@
-# October 2026 feature priorities
+# Feature priorities
 
-Ranked against current source, open work and recent CI on November 1, 2026.
-Effort and risk are relative estimates. This PR is a reviewable increment, not a release.
+Ranked against default-branch source, open work and recent CI on November 1, 2026.
+Effort and risk are relative estimates; this document records priorities, not a release schedule.
 
-| Rank | Candidate | Value | Effort | Risk | Reason |
+| Status / rank | Candidate | Value | Effort | Risk | Reason |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Explicit sanitized diagnostic export (this PR) | High | Small | Low | Share finding titles and claim names without including raw tokens or decoded values. |
-| 2 | Sanitized case workspace with field-level review | High | Medium | Medium | Let analysts assemble multiple safe artifacts and approve every saved field. |
-| 3 | Authenticated Graph execution with tenant preview | High | Large | High | Test real requests with explicit authority and write-impact review. |
+| Complete | Explicit sanitized diagnostic export | High | Small | Low | Available on `main`; the explicit JSON download includes finding titles and claim names, omitting raw tokens and decoded values. |
+| 1 | Authenticated Graph execution with tenant/account context and impact preview | High | Large | High | Lets analysts run documented requests with explicit authority. Require user initiation, least privilege, and a method/target/body/impact preview before mutations. Keep local checks distinct from authenticated results; development checks must not change a live tenant. |
+| 2 | Sanitized case workspace with field-level review | High | Medium | Medium | Lets analysts assemble safe artifacts and explicitly review each field before saving or exporting. |
