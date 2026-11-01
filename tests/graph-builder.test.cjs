@@ -29,6 +29,25 @@ test('read-only user lookup is limited to documented basic properties and permis
   assert.throws(() => buildRequest({template:'get-user-basic', userId:'demo@example.com', select:['department']}));
   assert.throws(() => buildRequest({template:'get-user-basic', userId:'demo@example.com', body:{}}));
 });
+test('basic user listing is a bounded first-page preview with least-privilege permissions', () => {
+  const delegated = buildRequest({template:'list-users-basic'});
+  assert.equal(delegated.method,'GET');
+  assert.equal(delegated.url,'https://graph.microsoft.com/v1.0/users?$select=id,displayName,userPrincipalName&$top=25');
+  assert.deepEqual(delegated.permissions,['User.ReadBasic.All']);
+  assert.match(delegated.impact,/one page/);
+  assert.match(delegated.limitations.join(' '),/complete @odata.nextLink URL/);
+  assert.match(delegated.documentation.source,/graph\/api\/user-list/);
+  assert.equal(delegated.body,undefined);
+
+  const application = buildRequest({template:'list-users-basic',authMode:'application',pageSize:100,select:['mail','surname','mail']});
+  assert.equal(application.url,'https://graph.microsoft.com/v1.0/users?$select=mail,surname&$top=100');
+  assert.deepEqual(application.permissions,['User.Read.All']);
+  for (const pageSize of [0,101,1.5,'25',null])
+    assert.throws(() => buildRequest({template:'list-users-basic',pageSize}));
+  assert.throws(() => buildRequest({template:'list-users-basic',select:['department']}));
+  assert.throws(() => buildRequest({template:'list-users-basic',userId:'demo@example.com'}));
+  assert.throws(() => buildRequest({template:'get-user-basic',userId:'demo@example.com',pageSize:25}));
+});
 test('profile update permits a documented subset and marks write impact', () => {
   const body = {department:'Identity', jobTitle:'Analyst'};
   const r = buildRequest({template:'update-user-profile', userId:'demo@example.com', body});
@@ -92,6 +111,10 @@ test('CLI returns a request and rejects secret-bearing definitions without discl
     result = spawnSync(process.execPath,[cli,file],{encoding:'utf8'});
     assert.equal(result.status,0);
     assert.deepEqual(JSON.parse(result.stdout).permissions,['User.ReadBasic.All']);
+    fs.writeFileSync(file, JSON.stringify({template:'list-users-basic',pageSize:10}));
+    result = spawnSync(process.execPath,[cli,file],{encoding:'utf8'});
+    assert.equal(result.status,0);
+    assert.equal(JSON.parse(result.stdout).url,'https://graph.microsoft.com/v1.0/users?$select=id,displayName,userPrincipalName&$top=10');
     fs.writeFileSync(file, JSON.stringify({template:'get-me',token:'SECRET'}));
     result = spawnSync(process.execPath,[cli,file],{encoding:'utf8'});
     assert.equal(result.status,1);

@@ -133,7 +133,9 @@ function invalidateGraphPreview(){
 function syncGraphTemplate(){
  const template=$('graph-template').value;
  const updating=template==='update-user-profile';
- $('graph-user-field').hidden=template==='get-me';
+ const listing=template==='list-users-basic';
+ $('graph-user-field').hidden=template==='get-me'||listing;
+ $('graph-page-size-field').hidden=!listing;
  $('graph-body-field').hidden=!updating;
  $('graph-select-field').hidden=updating;
 }
@@ -148,8 +150,9 @@ function buildGraphPreview(){
   const request=graphBuilder.buildRequest({
    template,
    authMode:$('graph-auth-mode').value,
-   ...(template!=='get-me'?{userId:$('graph-user-id').value.trim()}:{}),
-   ...(template==='update-user-profile'?{body:$('graph-body').value}:{select:selectedGraphFields()})
+   ...(['get-user-basic','update-user-profile'].includes(template)?{userId:$('graph-user-id').value.trim()}:{}),
+   ...(template==='update-user-profile'?{body:$('graph-body').value}:{select:selectedGraphFields()}),
+   ...(template==='list-users-basic'?{pageSize:Number($('graph-page-size').value)}:{})
   });
   $('graph-method').textContent=request.method;
   $('graph-url').textContent=request.url;
@@ -172,11 +175,11 @@ function buildGraphPreview(){
 }
 $('graph-template').addEventListener('change',()=>{syncGraphTemplate();invalidateGraphPreview();});
 $('graph-auth-mode').addEventListener('change',invalidateGraphPreview);
-for(const id of ['graph-user-id','graph-select','graph-body'])$(id).addEventListener('input',invalidateGraphPreview);
+for(const id of ['graph-user-id','graph-select','graph-body','graph-page-size'])$(id).addEventListener('input',invalidateGraphPreview);
 $('graph-preview-button').addEventListener('click',buildGraphPreview);
 $('graph-clear-button').addEventListener('click',()=>{
  $('graph-template').value='get-me';$('graph-auth-mode').value='delegated';$('graph-user-id').value='';
- $('graph-select').value='';$('graph-body').value='{"department":"Identity","jobTitle":"Analyst"}';
+ $('graph-select').value='';$('graph-body').value='{"department":"Identity","jobTitle":"Analyst"}';$('graph-page-size').value='25';
  $('graph-export-output').value='';$('graph-error').textContent='';invalidateGraphPreview();syncGraphTemplate();
 });
 document.querySelectorAll('[data-graph-export]').forEach(button=>button.addEventListener('click',()=>{

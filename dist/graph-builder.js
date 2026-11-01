@@ -14,6 +14,12 @@ const templates = Object.freeze({
     permissions: { delegated: ['User.ReadBasic.All'], application: ['User.Read.All'] },
     note: 'Reads only basic user properties: id, displayName, givenName, surname, mail, and userPrincipalName. The endpoint documents User.ReadBasic.All for delegated access to other users and User.Read.All for application access.'
   }),
+  'list-users-basic': Object.freeze({
+    method: 'GET', path: '/users', version: 'v1.0',
+    source: 'https://learn.microsoft.com/en-us/graph/api/user-list?view=graph-rest-1.0',
+    permissions: { delegated: ['User.ReadBasic.All'], application: ['User.Read.All'] },
+    note: 'Lists only basic user properties on one page. The local preview caps $top at 100; if a response includes @odata.nextLink, use the complete @odata.nextLink URL for the next page. No follow-up request is generated.'
+  }),
   'update-user-profile': Object.freeze({
     method: 'PATCH', path: '/users/{id}', version: 'v1.0',
     source: 'https://learn.microsoft.com/en-us/graph/api/user-update?view=graph-rest-1.0',
@@ -41,7 +47,7 @@ function encodeUserKey(userId) {
   // as well so every accepted UPN remains one opaque Graph path segment.
   return encodeURIComponent(userId).replace(/'/g, '%27');
 }
-function buildRequest({ template, userId, body, select, authMode = 'delegated' } = {}) {
+function buildRequest({ template, userId, body, select, pageSize, authMode = 'delegated' } = {}) {
   if (!Object.hasOwn(templates, template)) throw new Error('Choose a supported template.');
   const spec = templates[template];
   if (!['delegated', 'application'].includes(authMode) || !spec.permissions[authMode])
@@ -50,7 +56,7 @@ function buildRequest({ template, userId, body, select, authMode = 'delegated' }
   if (template === 'update-user-profile' || template === 'get-user-basic') {
     // Single opaque identifier, never a caller-supplied URL/path/query.
     path = '/users/' + encodeUserKey(userId);
-  } else if (userId !== undefined) throw new Error('get-me does not accept a user ID.');
+  } else if (userId !== undefined) throw new Error('This template does not accept a user ID.');
   let parsed;
   if (spec.method === 'PATCH') {
     if (typeof body === 'string') {
@@ -68,16 +74,24 @@ function buildRequest({ template, userId, body, select, authMode = 'delegated' }
     if (select !== undefined) throw new Error('Select is only supported by the get-me template.');
   } else if (body !== undefined) throw new Error('GET must not contain a request body.');
   let query = '';
-  if (template === 'get-user-basic') {
+  if (template === 'get-user-basic' || template === 'list-users-basic') {
     const basicFields = select === undefined ? defaultBasicSelection : select;
     if (!Array.isArray(basicFields) || !basicFields.length || basicFields.some(k => !basicSelectable.has(k)))
       throw new Error('This template selects only basic user profile properties.');
     query = '?$select=' + [...new Set(basicFields)].join(',');
+    if (template === 'list-users-basic') {
+      const requestedPageSize = pageSize === undefined ? 25 : pageSize;
+      if (!Number.isInteger(requestedPageSize) || requestedPageSize < 1 || requestedPageSize > 100)
+        throw new Error('Page size must be a whole number from 1 to 100.');
+      query += '&$top=' + requestedPageSize;
+    }
   } else if (select !== undefined) {
     if (!Array.isArray(select) || !select.length || select.some(k => !selectable.has(k)))
       throw new Error('Select must be a nonempty list of supported profile fields.');
     query = '?$select=' + [...new Set(select)].join(',');
   }
+  if (template !== 'list-users-basic' && pageSize !== undefined)
+    throw new Error('Page size is only supported by the list-users template.');
   return {
     method: spec.method, url: 'https://graph.microsoft.com/' + spec.version + path + query,
     headers: parsed ? { 'Content-Type': 'application/json' } : {},
@@ -86,7 +100,8 @@ function buildRequest({ template, userId, body, select, authMode = 'delegated' }
     authMode, permissions: [...spec.permissions[authMode]],
     impact: parsed ? 'Writes the supplied profile fields when executed against a tenant.' :
       template === 'get-user-basic' ? 'Reads the selected basic properties of the specified user when executed.' :
-        'Reads the signed-in user profile when executed.',
+        template === 'list-users-basic' ? 'Reads one page of selected basic user properties when executed.' :
+          'Reads the signed-in user profile when executed.',
     limitations: [spec.note, 'Local template checks only: no request sent, no consent or tenant validation, no Graph dry-run.']
   };
 }
