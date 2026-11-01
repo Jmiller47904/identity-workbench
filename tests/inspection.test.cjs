@@ -7,7 +7,8 @@ const {JSDOM} = require('jsdom');
 const html=fs.readFileSync('dist/index.html','utf8');
 const js=fs.readFileSync('dist/app.js','utf8');
 const graphJs=fs.readFileSync('dist/graph-builder.js','utf8');
-function setup(){const dom=new JSDOM(html,{runScripts:'outside-only',url:'https://example.com/identity-workbench/'});dom.window.TextDecoder=TextDecoder;dom.window.eval(graphJs);dom.window.eval(js);return dom;}
+const diagnosticJs=fs.readFileSync('dist/diagnostic-export.js','utf8');
+function setup(){const dom=new JSDOM(html,{runScripts:'outside-only',url:'https://example.com/identity-workbench/'});dom.window.TextDecoder=TextDecoder;dom.window.eval(graphJs);dom.window.eval(diagnosticJs);dom.window.eval(js);return dom;}
 function jwt(payload){return Buffer.from('{"alg":"RS256"}').toString('base64url')+'.'+Buffer.from(JSON.stringify(payload)).toString('base64url')+'.ZXhhbXBsZQ';}
 test('JWT example reports expiry and Graph audience; clear removes decoded data',()=>{
  const dom=setup(),d=dom.window.document;d.getElementById('jwt-sample').click();
@@ -18,6 +19,32 @@ test('JWT example reports expiry and Graph audience; clear removes decoded data'
 });
 test('JWT expected audience mismatches; claim HTML is text',()=>{
  const dom=setup(),d=dom.window.document;d.getElementById('token').value=jwt({exp:1,aud:'other',name:'<img src=x onerror=alert(1)>'});d.getElementById('audience').value='expected';d.getElementById('analyze').click();assert.match(d.getElementById('diagnostics').textContent,/aud mismatch/);assert.equal(d.getElementById('claims').querySelector('img'),null);dom.window.close();
+});
+test('sanitized diagnostic export omits raw input, claim values and expected values',()=>{
+ const {buildSanitizedDiagnostic}=require('../dist/diagnostic-export.js');
+ const report=buildSanitizedDiagnostic({
+  format:'JWT',raw:'RAW_SECRET_TOKEN',
+  claims:[['aud','SECRET_AUDIENCE'],['name','Sensitive Person']],
+  findings:[{level:'issue',title:'aud mismatch',body:'Expected SECRET_EXPECTED'}],
+  stats:[['Tenant','SECRET_TENANT']]
+ },0);
+ const serialized=JSON.stringify(report);
+ assert.equal(report.generatedAt,'1970-01-01T00:00:00.000Z');
+ assert.deepEqual(report.claimNames,['aud','name']);
+ assert.deepEqual(report.diagnostics,[{level:'issue',title:'aud mismatch'}]);
+ for(const secret of ['RAW_SECRET_TOKEN','SECRET_AUDIENCE','Sensitive Person','SECRET_EXPECTED','SECRET_TENANT'])
+  assert.doesNotMatch(serialized,new RegExp(secret));
+ assert.match(report.notice,/does not verify signatures/);
+});
+test('sanitized export is explicit and no report is retained after clearing',()=>{
+ const dom=setup(),d=dom.window.document;
+ d.getElementById('jwt-sample').click();
+ assert.equal(d.getElementById('export-diagnostics').disabled,false);
+ d.getElementById('clear').click();
+ assert.equal(d.getElementById('results').hidden,true);
+ assert.equal(d.getElementById('raw').textContent,'');
+ assert.match(d.querySelector('.diagnostic-export').textContent,/raw input and values are omitted/);
+ dom.window.close();
 });
 test('non-finite JWT times report only the invalid claim',()=>{
  const dom=setup(),d=dom.window.document;

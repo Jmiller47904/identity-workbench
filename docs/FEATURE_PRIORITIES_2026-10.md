@@ -1,10 +1,10 @@
 # October 2026 feature priorities
 
-Ranked against current source, open work and recent CI on October 1, 2026.
+Ranked against current source, open work and recent CI on November 1, 2026.
 Effort and risk are relative estimates. This PR is a reviewable increment, not a release.
 
 | Rank | Candidate | Value | Effort | Risk | Reason |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Offline Graph request builder (this PR) | High | Small | Low | Prepare documented requests without tenant access. |
-| 2 | Searchable Entra attribute/claim cross-reference and browser integration | High | Medium | Medium | Reduce lookup time while distinguishing directory properties from emitted claims. |
+| 1 | Explicit sanitized diagnostic export (this PR) | High | Small | Low | Share finding titles and claim names without including raw tokens or decoded values. |
+| 2 | Sanitized case workspace with field-level review | High | Medium | Medium | Let analysts assemble multiple safe artifacts and approve every saved field. |
 | 3 | Authenticated Graph execution with tenant preview | High | Large | High | Test real requests with explicit authority and write-impact review. |
