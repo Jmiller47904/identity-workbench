@@ -49,6 +49,32 @@ test('SAML recipient comparison treats SubjectConfirmation entries as alternativ
  assert.doesNotMatch(diagnostics,/Recipient mismatch/);
  dom.window.close();
 });
+test('SAML confirmation time diagnostics treat confirmation entries as alternatives',()=>{
+ const dom=setup(),d=dom.window.document;
+ d.getElementById('saml-sample').click();
+ const xml=d.getElementById('token').value;
+ const expired=new Date(Date.now()-60000).toISOString();
+ const alternative='<saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer"><saml:SubjectConfirmationData Recipient="https://other.example.com/saml/acs" NotOnOrAfter="'+expired+'"/></saml:SubjectConfirmation>';
+ d.getElementById('token').value=xml.replace('</saml:Subject>',alternative+'</saml:Subject>');
+ d.getElementById('recipient').value='https://app.example.com/saml/acs';
+ d.getElementById('analyze').click();
+ const diagnostics=d.getElementById('diagnostics').textContent;
+ assert.match(diagnostics,/SubjectConfirmation 1 time window passes/);
+ assert.match(diagnostics,/SubjectConfirmation 2 time window does not pass/);
+ assert.doesNotMatch(diagnostics,/No SubjectConfirmation time window passes/);
+ dom.window.close();
+});
+test('SAML reports when all inspected confirmation time windows fail',()=>{
+ const dom=setup(),d=dom.window.document;
+ d.getElementById('saml-sample').click();
+ const expired=new Date(Date.now()-60000).toISOString();
+ d.getElementById('token').value=d.getElementById('token').value.replace(
+  /(<saml:SubjectConfirmationData\b[^>]*\bNotOnOrAfter=")[^"]+/,`$1${expired}`
+ );
+ d.getElementById('analyze').click();
+ assert.match(d.getElementById('diagnostics').textContent,/No SubjectConfirmation time window passes/);
+ dom.window.close();
+});
 test('Multiple SAML audience restrictions all must match',()=>{
  const dom=setup(),d=dom.window.document;d.getElementById('saml-sample').click();d.getElementById('token').value=d.getElementById('token').value.replace('</saml:Conditions>','<saml:AudienceRestriction><saml:Audience>urn:other</saml:Audience></saml:AudienceRestriction></saml:Conditions>');d.getElementById('audience').value='urn:example:app';d.getElementById('analyze').click();assert.match(d.getElementById('diagnostics').textContent,/Audience mismatch/);dom.window.close();
 });
