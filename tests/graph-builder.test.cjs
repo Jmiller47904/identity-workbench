@@ -6,10 +6,28 @@ test('read-only template constrains endpoint, permissions and selected fields', 
   const r = buildRequest({template:'get-me', select:['id','department','id']});
   assert.equal(r.url, 'https://graph.microsoft.com/v1.0/me?$select=id,department');
   assert.deepEqual(r.permissions, ['User.Read']);
-  assert.equal(r.documentation.verifiedOn, '2026-10-05');
+  assert.equal(r.documentation.verifiedOn, '2026-11-01');
   assert.throws(() => buildRequest({template:'get-me', authMode:'application'}));
   assert.throws(() => buildRequest({template:'get-me', body:{}}));
   assert.throws(() => buildRequest({template:'get-me', select:['passwordProfile']}));
+});
+test('read-only user lookup is limited to documented basic properties and permissions', () => {
+  const delegated = buildRequest({template:'get-user-basic', userId:'demo@example.com'});
+  assert.equal(delegated.method,'GET');
+  assert.equal(delegated.url,'https://graph.microsoft.com/v1.0/users/demo%40example.com?$select=id,displayName,userPrincipalName');
+  assert.deepEqual(delegated.permissions,['User.ReadBasic.All']);
+  assert.equal(delegated.impact,'Reads the selected basic properties of the specified user when executed.');
+  assert.match(delegated.documentation.source,/graph\/api\/user-get/);
+  assert.equal(delegated.body,undefined);
+
+  const application = buildRequest({template:'get-user-basic', userId:'00000000-0000-0000-0000-000000000001', authMode:'application'});
+  assert.equal(application.url,'https://graph.microsoft.com/v1.0/users/00000000-0000-0000-0000-000000000001?$select=id,displayName,userPrincipalName');
+  assert.deepEqual(application.permissions,['User.Read.All']);
+
+  const selected = buildRequest({template:'get-user-basic', userId:'demo@example.com', select:['mail','surname','mail']});
+  assert.equal(selected.url,'https://graph.microsoft.com/v1.0/users/demo%40example.com?$select=mail,surname');
+  assert.throws(() => buildRequest({template:'get-user-basic', userId:'demo@example.com', select:['department']}));
+  assert.throws(() => buildRequest({template:'get-user-basic', userId:'demo@example.com', body:{}}));
 });
 test('profile update permits a documented subset and marks write impact', () => {
   const body = {department:'Identity', jobTitle:'Analyst'};
@@ -70,6 +88,10 @@ test('CLI returns a request and rejects secret-bearing definitions without discl
     let result = spawnSync(process.execPath,[cli,file],{encoding:'utf8'});
     assert.equal(result.status,0);
     assert.equal(JSON.parse(result.stdout).method,'GET');
+    fs.writeFileSync(file, JSON.stringify({template:'get-user-basic',userId:'demo@example.com'}));
+    result = spawnSync(process.execPath,[cli,file],{encoding:'utf8'});
+    assert.equal(result.status,0);
+    assert.deepEqual(JSON.parse(result.stdout).permissions,['User.ReadBasic.All']);
     fs.writeFileSync(file, JSON.stringify({template:'get-me',token:'SECRET'}));
     result = spawnSync(process.execPath,[cli,file],{encoding:'utf8'});
     assert.equal(result.status,1);

@@ -120,8 +120,9 @@ function invalidateGraphPreview(){
  $('graph-export-output').value='';
 }
 function syncGraphTemplate(){
- const updating=$('graph-template').value==='update-user-profile';
- $('graph-user-field').hidden=!updating;
+ const template=$('graph-template').value;
+ const updating=template==='update-user-profile';
+ $('graph-user-field').hidden=template==='get-me';
  $('graph-body-field').hidden=!updating;
  $('graph-select-field').hidden=updating;
 }
@@ -136,7 +137,8 @@ function buildGraphPreview(){
   const request=graphBuilder.buildRequest({
    template,
    authMode:$('graph-auth-mode').value,
-   ...(template==='update-user-profile'?{userId:$('graph-user-id').value.trim(),body:$('graph-body').value}:{select:selectedGraphFields()})
+   ...(template!=='get-me'?{userId:$('graph-user-id').value.trim()}:{}),
+   ...(template==='update-user-profile'?{body:$('graph-body').value}:{select:selectedGraphFields()})
   });
   $('graph-method').textContent=request.method;
   $('graph-url').textContent=request.url;

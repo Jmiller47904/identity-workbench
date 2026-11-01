@@ -142,6 +142,28 @@ test('Graph browser workbench shows local validation errors without echoing body
  dom.window.close();
 });
 
+test('Graph browser workbench previews a basic other-user read with documented permissions',()=>{
+ const dom=setup(),d=dom.window.document;
+ let fetchCalls=0;dom.window.fetch=()=>{fetchCalls++;throw new Error('network use is forbidden in this test');};
+ d.getElementById('graph-template').value='get-user-basic';
+ d.getElementById('graph-template').dispatchEvent(new dom.window.Event('change'));
+ assert.equal(d.getElementById('graph-user-field').hidden,false);
+ d.getElementById('graph-user-id').value='demo@example.com';
+ d.getElementById('graph-preview-button').click();
+ assert.equal(d.getElementById('graph-method').textContent,'GET');
+ assert.equal(d.getElementById('graph-url').textContent,'https://graph.microsoft.com/v1.0/users/demo%40example.com?$select=id,displayName,userPrincipalName');
+ assert.match(d.getElementById('graph-permissions').textContent,/User.ReadBasic\.All/);
+ assert.match(d.getElementById('graph-result').textContent,/NOT EXECUTED/);
+ assert.match(d.getElementById('graph-documentation').href,/graph\/api\/user-get/);
+ assert.equal(d.getElementById('graph-preview-body-wrap').hidden,true);
+ d.getElementById('graph-auth-mode').value='application';
+ d.getElementById('graph-auth-mode').dispatchEvent(new dom.window.Event('change'));
+ d.getElementById('graph-preview-button').click();
+ assert.match(d.getElementById('graph-permissions').textContent,/User.Read\.All/);
+ assert.equal(fetchCalls,0);
+ dom.window.close();
+});
+
 test('Graph response explainer gives local throttling guidance and escapes response text',()=>{
  const dom=setup(),d=dom.window.document;
  let fetchCalls=0;dom.window.fetch=()=>{fetchCalls++;throw new Error('network use is forbidden in this test');};
