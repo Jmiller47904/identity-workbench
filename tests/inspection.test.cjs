@@ -20,6 +20,35 @@ test('JWT example reports expiry and Graph audience; clear removes decoded data'
 test('JWT expected audience mismatches; claim HTML is text',()=>{
  const dom=setup(),d=dom.window.document;d.getElementById('token').value=jwt({exp:1,aud:'other',name:'<img src=x onerror=alert(1)>'});d.getElementById('audience').value='expected';d.getElementById('analyze').click();assert.match(d.getElementById('diagnostics').textContent,/aud mismatch/);assert.equal(d.getElementById('claims').querySelector('img'),null);dom.window.close();
 });
+test('JWT roles without scp do not imply an app-only access token',()=>{
+ const dom=setup(),d=dom.window.document;d.getElementById('token').value=jwt({roles:['Reader']});d.getElementById('analyze').click();
+ assert.match(d.getElementById('diagnostics').textContent,/roles can contain app roles assigned to a user or permissions granted to a requesting application/);
+ assert.match(d.getElementById('diagnostics').textContent,/Token type is inconclusive/);
+ assert.match(d.getElementById('diagnostics').textContent,/ID tokens also omit scp/);
+ dom.window.close();
+});
+test('JWT delegated scopes and user roles remain distinct from app-only guidance',()=>{
+ const dom=setup(),d=dom.window.document;d.getElementById('token').value=jwt({scp:'User.Read',roles:['Reader']});d.getElementById('analyze').click();
+ const diagnostics=d.getElementById('diagnostics').textContent;
+ assert.match(diagnostics,/included only in user tokens/);
+ assert.match(diagnostics,/roles can contain app roles assigned to a user/);
+ assert.doesNotMatch(diagnostics,/Token type is inconclusive/);
+ dom.window.close();
+});
+test('JWT idtyp app is explained as decoded, optional app-only claim',()=>{
+ const dom=setup(),d=dom.window.document;d.getElementById('token').value=jwt({roles:['Reader'],idtyp:'app'});d.getElementById('analyze').click();
+ const diagnostics=d.getElementById('diagnostics').textContent;
+ assert.match(diagnostics,/idtyp token type claim/);
+ assert.match(diagnostics,/Decoded idtyp is app/);
+ assert.doesNotMatch(diagnostics,/Token type is inconclusive/);
+ assert.match(d.getElementById('claims').textContent,/validated app value identifies an app-only access token/);
+ dom.window.close();
+});
+test('JWT contradictory scp and app idtyp signals receive a local warning',()=>{
+ const dom=setup(),d=dom.window.document;d.getElementById('token').value=jwt({scp:'User.Read',idtyp:'app'});d.getElementById('analyze').click();
+ assert.match(d.getElementById('diagnostics').textContent,/Claim context needs review/);
+ dom.window.close();
+});
 test('sanitized diagnostic export omits raw input, claim values and expected values',()=>{
  const {buildSanitizedDiagnostic}=require('../dist/diagnostic-export.js');
  const report=buildSanitizedDiagnostic({
