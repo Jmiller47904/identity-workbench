@@ -49,6 +49,55 @@ test('SAML recipient comparison treats SubjectConfirmation entries as alternativ
  assert.doesNotMatch(diagnostics,/Recipient mismatch/);
  dom.window.close();
 });
+test('SAML Response destination and request correlation compare locally and clear expected IDs',()=>{
+ const dom=setup(),d=dom.window.document;
+ d.getElementById('saml-sample').click();
+ const xml=d.getElementById('token').value.replace(
+  'ID="_demo_response" Version="2.0"',
+  'ID="_demo_response" Version="2.0" Destination="https://app.example.com/saml/acs" InResponseTo="_request-123"'
+ );
+ d.getElementById('token').value=xml;
+ d.getElementById('recipient').value='https://app.example.com/saml/acs';
+ d.getElementById('expected-saml-request-id').value='_request-123';
+ d.getElementById('analyze').click();
+ let diagnostics=d.getElementById('diagnostics').textContent;
+ assert.match(diagnostics,/Response Destination matches/);
+ assert.match(diagnostics,/Response InResponseTo matches/);
+ assert.match(d.getElementById('claims').textContent,/Response Destination/);
+ assert.match(d.getElementById('claims').textContent,/Response InResponseTo/);
+
+ d.getElementById('recipient').value='https://wrong.example.com/saml/acs';
+ d.getElementById('expected-saml-request-id').value='_another-request';
+ d.getElementById('analyze').click();
+ diagnostics=d.getElementById('diagnostics').textContent;
+ assert.match(diagnostics,/Response Destination does not exactly match/);
+ assert.match(diagnostics,/Response InResponseTo mismatch/);
+
+ d.getElementById('clear').click();
+ assert.equal(d.getElementById('expected-saml-request-id').value,'');
+ assert.equal(d.getElementById('recipient').value,'');
+ dom.window.close();
+});
+test('SAML correlation reports missing or unavailable Response fields without claiming validation',()=>{
+ const dom=setup(),d=dom.window.document;
+ d.getElementById('saml-sample').click();
+ d.getElementById('expected-saml-request-id').value='_request-expected';
+ d.getElementById('recipient').value='https://app.example.com/saml/acs';
+ d.getElementById('analyze').click();
+ let diagnostics=d.getElementById('diagnostics').textContent;
+ assert.match(diagnostics,/Response Destination not supplied/);
+ assert.match(diagnostics,/Response InResponseTo is missing/);
+ assert.match(d.getElementById('inspection-notice').textContent,/Signatures, trust, replay protection, and full protocol validity are not verified/);
+
+ const assertion=d.getElementById('token').value.match(/<saml:Assertion[\s\S]*?<\/saml:Assertion>/)[0]
+  .replace('<saml:Assertion ', '<saml:Assertion xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ');
+ d.getElementById('token').value=assertion;
+ d.getElementById('analyze').click();
+ diagnostics=d.getElementById('diagnostics').textContent;
+ assert.match(diagnostics,/Response Destination unavailable/);
+ assert.match(diagnostics,/Response correlation unavailable/);
+ dom.window.close();
+});
 test('SAML confirmation time diagnostics treat confirmation entries as alternatives',()=>{
  const dom=setup(),d=dom.window.document;
  d.getElementById('saml-sample').click();
