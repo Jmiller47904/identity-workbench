@@ -11,7 +11,7 @@ Inspect JWT and SAML 2.0 responses locally. Decode claims, compare expected audi
 | Explicit sanitized diagnostic export | Developer preview in this proposed pull request; exports finding titles and claim names only |
 | Graph request/JSON builder, including a read-only basic-profile lookup, permission and impact previews, PowerShell/cURL export, local response explanations | Available in the browser, desktop UI, and offline Node.js CLI/library |
 | B2B guest UPN targets, including encoded `#EXT#` identifiers | Supported by the Graph profile-update template |
-| Searchable Entra attributes/claims reference in browser and desktop UI | Available (11 documented Graph user properties; curated starting set) |
+| Searchable Entra attributes/claims reference in browser and desktop UI | Available (12 curated reference entries, including extension attributes) |
 | Authenticated Graph execution and tenant response diagnostics | Planned |
 
 The default branch can contain changes newer than published downloads. The Graph
@@ -26,6 +26,8 @@ does not automatically update an existing release.
 - **November 1, 2026 — sanitized diagnostic export (proposed):** adds an explicit local JSON download containing the inspection format, finding severity/title, and claim names. Raw input, decoded values, expected configuration values, and finding detail text are omitted. Nothing is uploaded or retained by the application. [PR #16](https://github.com/Jmiller47904/identity-workbench/pull/16) is open for review; this change is not on the default branch or in v0.2.0 release assets.
 
 - **November 1, 2026 — read-only Graph user lookup:** adds a local [`GET /users/{id | userPrincipalName}`](https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0) template limited to `id`, `displayName`, and `userPrincipalName` by default. Microsoft documents `User.ReadBasic.All` for delegated reads of other users' basic profiles and `User.Read.All` as the least-privileged application permission for this endpoint. The template can select only the basic profile properties listed in the [permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference?view=graph-rest-1.0); it sends no request and does not handle credentials.
+
+- **November 1, 2026 — extension attributes reference:** adds the Graph `onPremisesExtensionAttributes` object and its `extensionAttribute1`–`extensionAttribute15` members to the searchable reference. It explains source-of-authority/read-only behavior for synchronized users and that SAML extension-attribute claims require application configuration. This is reference guidance only; it does not read directory data or predict issued claims.
 
 - **October 31, 2026 — local OAuth/OIDC error diagnostics:** recognizes authorization error callbacks and OAuth error JSON, surfaces documented error and correlation fields, and can compare returned state locally. Successful callback codes and token responses are rejected. It does not authenticate or send requests. [PR #8](https://github.com/Jmiller47904/identity-workbench/pull/8).
 
@@ -150,13 +152,13 @@ Response guidance verified October 31, 2026:
 - [Microsoft Graph throttling](https://learn.microsoft.com/en-us/graph/throttling): honor Retry-After for HTTP 429; if absent, use exponential backoff and avoid immediate retries.
 - [Microsoft Graph paging](https://learn.microsoft.com/en-us/graph/paging): use the complete @odata.nextLink URL as an opaque value; custom headers other than Authorization and Content-Type aren't carried to subsequent requests by default.
 
-Next: explicitly authenticated testing with tenant/account identification, least-privilege guidance, and an impact preview before mutations. The searchable Entra reference now covers 11 curated user properties; broader attribute and claims coverage remains planned. See roadmap issue #1.
+Next: explicitly authenticated testing with tenant/account identification, least-privilege guidance, and an impact preview before mutations. The searchable Entra reference now covers 12 curated entries; broader attribute and claims coverage remains planned. See roadmap issue #1.
 
 ## Roadmap
 
 The offline Graph builder is available in the browser and desktop source. The next
 increment is explicitly authenticated Graph testing, requiring tenant/account identification,
-least-privilege guidance, and an impact preview before mutations. The searchable Entra reference covers 11 curated user properties and needs broader, continuously verified coverage.
+least-privilege guidance, and an impact preview before mutations. The searchable Entra reference covers 12 curated entries and needs broader, continuously verified coverage.
 Later analyst workflows cover app registrations/service principals, roles/consent,
 federation, SCIM/provisioning, certificates, Conditional Access, sign-in diagnostics,
 token comparison, and explicitly saved sanitized case workspaces. The current

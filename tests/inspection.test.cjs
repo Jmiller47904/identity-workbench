@@ -301,7 +301,7 @@ test('Graph response explainer diagnoses access denial and clears stale input/re
 
 test('searchable Entra reference distinguishes directory properties from token claims',()=>{
  const dom=setup(),d=dom.window.document;
- assert.equal(d.querySelectorAll('#reference-rows tr').length,11);
+ assert.equal(d.querySelectorAll('#reference-rows tr').length,12);
  assert.match(d.getElementById('reference-rows').textContent,/No guaranteed direct claim mapping/);
  assert.equal(d.querySelectorAll('#reference-rows tr:first-child a').length,2);
  assert.match(d.querySelector('#reference-rows tr:first-child a').href,/graph\/api\/resources\/user/);
@@ -333,6 +333,21 @@ test('Entra reference includes core account and workforce properties without pro
   assert.match(rows[0].querySelector('a').href,/graph\/api\/resources\/user\?view=graph-rest-1.0/);
   assert.match(rows[0].querySelector('a:last-of-type').href,/reference-claims-customization/);
  }
+ dom.window.close();
+});
+test('Entra reference documents extension attribute authority and configured SAML claims',()=>{
+ const dom=setup(),d=dom.window.document;
+ const search=d.getElementById('reference-search');
+ search.value='extensionAttribute1';
+ search.dispatchEvent(new dom.window.Event('input',{bubbles:true}));
+ const rows=d.querySelectorAll('#reference-rows tr');
+ assert.equal(rows.length,1);
+ assert.match(rows[0].textContent,/onPremisesExtensionAttributes/);
+ assert.match(rows[0].textContent,/extensionAttribute1–15/);
+ assert.match(rows[0].textContent,/Active Directory is the source of authority/);
+ assert.match(rows[0].textContent,/depends on the application configuration/);
+ assert.match(rows[0].querySelector('a[href*="onpremisesextensionattributes"]')?.href,/graph\/api\/resources\/onpremisesextensionattributes\?view=graph-rest-1.0/);
+ assert.match(rows[0].querySelector('a[href*="saml-claims-customization"]')?.href,/entra\/identity-platform\/saml-claims-customization/);
  dom.window.close();
 });
 test('OIDC authorization error callback explains interaction and compares state locally',()=>{
