@@ -8,8 +8,13 @@ const html=fs.readFileSync('dist/index.html','utf8');
 const js=fs.readFileSync('dist/app.js','utf8');
 const graphJs=fs.readFileSync('dist/graph-builder.js','utf8');
 const diagnosticJs=fs.readFileSync('dist/diagnostic-export.js','utf8');
+const readme=fs.readFileSync('README.md','utf8');
 function setup(){const dom=new JSDOM(html,{runScripts:'outside-only',url:'https://example.com/identity-workbench/'});dom.window.TextDecoder=TextDecoder;dom.window.eval(graphJs);dom.window.eval(diagnosticJs);dom.window.eval(js);return dom;}
 function jwt(payload){return Buffer.from('{"alg":"RS256"}').toString('base64url')+'.'+Buffer.from(JSON.stringify(payload)).toString('base64url')+'.ZXhhbXBsZQ';}
+test('README lists the sanitized diagnostic export as available on the default branch',()=>{
+ assert.match(readme,/\| Explicit sanitized diagnostic export \| Available in browser and desktop UI/);
+ assert.doesNotMatch(readme,/Developer preview in this proposed pull request/);
+});
 test('JWT example reports expiry and Graph audience; clear removes decoded data',()=>{
  const dom=setup(),d=dom.window.document;d.getElementById('jwt-sample').click();
  assert.equal(d.getElementById('error').textContent,'');
