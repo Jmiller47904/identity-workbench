@@ -17,7 +17,6 @@ jobs:
       - name: Send summary to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
         run: |
           python - <<'PY'
           import json
