@@ -8,7 +8,7 @@ Inspect JWT and SAML 2.0 responses locally. Decode claims, compare expected audi
 | --- | --- |
 | Local JWT/SAML inspection and Entra diagnostic clues | Available in the browser and desktop interface |
 | Local OAuth/OIDC authorization-error response diagnosis | Available in the browser and desktop UI |
-| Explicit sanitized diagnostic export | Developer preview in this proposed pull request; exports finding titles and claim names only |
+| Explicit sanitized diagnostic export | Available in browser and desktop UI; explicit JSON download includes finding titles and claim names only |
 | Graph request/JSON builder, including a read-only basic-profile lookup, permission and impact previews, PowerShell/cURL export, local response explanations | Available in the browser, desktop UI, and offline Node.js CLI/library |
 | B2B guest UPN targets, including encoded `#EXT#` identifiers | Supported by the Graph profile-update template |
 | Searchable Entra attributes/claims reference in browser and desktop UI | Available (12 curated reference entries, including extension attributes) |
