@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 19189)
-Total output lines: 800
-
 # Identity Workbench
 
 Inspect JWT and SAML 2.0 responses locally. Decode claims, compare expected audience/issuer/recipient, inspect time conditions, and get Entra-specific diagnostic clues. This is an inspection tool, not a token validator: it does not verify signatures, trust, replay protection, or full protocol validity.
