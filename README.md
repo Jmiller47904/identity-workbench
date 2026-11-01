@@ -23,7 +23,7 @@ does not automatically update an existing release.
 
 ## Recent updates
 
-- **November 1, 2026 — sanitized diagnostic export (proposed):** adds an explicit local JSON download containing the inspection format, finding severity/title, and claim names. Raw input, decoded values, expected configuration values, and finding detail text are omitted. Nothing is uploaded or retained by the application. This source change is proposed in the current pull request and is not present in v0.2.0 release assets; the PR link will be recorded before review is complete.
+- **November 1, 2026 — sanitized diagnostic export (proposed):** adds an explicit local JSON download containing the inspection format, finding severity/title, and claim names. Raw input, decoded values, expected configuration values, and finding detail text are omitted. Nothing is uploaded or retained by the application. [PR #16](https://github.com/Jmiller47904/identity-workbench/pull/16) is open for review; this change is not on the default branch or in v0.2.0 release assets.
 
 - **November 1, 2026 — read-only Graph user lookup:** adds a local [`GET /users/{id | userPrincipalName}`](https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0) template limited to `id`, `displayName`, and `userPrincipalName` by default. Microsoft documents `User.ReadBasic.All` for delegated reads of other users' basic profiles and `User.Read.All` as the least-privileged application permission for this endpoint. The template can select only the basic profile properties listed in the [permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference?view=graph-rest-1.0); it sends no request and does not handle credentials.
 
