@@ -9,7 +9,7 @@ try {
   try { definition = JSON.parse(fs.readFileSync(file, 'utf8')); }
   catch { throw new Error('Request definition must be valid JSON.'); }
   if (!definition || Array.isArray(definition) || typeof definition !== 'object') throw new Error('Request definition must be an object.');
-  const allowed = new Set(['template', 'userId', 'body', 'select', 'authMode']);
+  const allowed = new Set(['template', 'userId', 'body', 'select', 'pageSize', 'authMode']);
   if (Object.keys(definition).some(k => !allowed.has(k))) throw new Error('Unsupported definition field. Do not include tokens or credentials.');
   console.log(exportRequest(buildRequest(definition), format));
 } catch (error) {

@@ -9,7 +9,7 @@ Inspect JWT and SAML 2.0 responses locally. Decode claims, compare expected audi
 | Local JWT/SAML inspection and Entra diagnostic clues | Available in the browser and desktop interface |
 | Local OAuth/OIDC authorization-error response diagnosis | Available in the browser and desktop UI |
 | Explicit sanitized diagnostic export | Available in browser and desktop UI; explicit JSON download includes finding titles and claim names only |
-| Graph request/JSON builder, including a read-only basic-profile lookup, permission and impact previews, PowerShell/cURL export, local response explanations | Available in the browser, desktop UI, and offline Node.js CLI/library |
+| Graph request/JSON builder, including read-only single-user and bounded first-page basic-user lookups, permission and impact previews, PowerShell/cURL export, local response explanations | Available in the browser, desktop UI, and offline Node.js CLI/library |
 | B2B guest UPN targets, including encoded `#EXT#` identifiers | Supported by the Graph profile-update template |
 | Searchable Entra attributes/claims reference in browser and desktop UI | Available (12 curated reference entries, including extension attributes) |
 | Authenticated Graph execution and tenant response diagnostics | Planned |
@@ -28,6 +28,8 @@ does not automatically update an existing release.
 - **November 1, 2026 — OIDC access-token role/scope guidance:** clarifies locally that `scp` is documented for user tokens, `roles` can represent app roles assigned to users or application permissions, and `roles` without `scp` does not establish an app-only flow. Conflicting decoded `scp` and `idtyp: app` signals receive a review warning. When decoded `idtyp` is `app`, the inspector explains the claim’s optional-claim configuration and trust limits. This is unverified local claim guidance, not authentication or authorization. Sources: [access token claims](https://learn.microsoft.com/en-us/entra/identity-platform/access-token-claims-reference) and [secure claims validation](https://learn.microsoft.com/en-us/entra/identity-platform/claims-validation).
 
 - **November 1, 2026 — read-only Graph user lookup:** adds a local [`GET /users/{id | userPrincipalName}`](https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0) template limited to `id`, `displayName`, and `userPrincipalName` by default. Microsoft documents `User.ReadBasic.All` for delegated reads of other users' basic profiles and `User.Read.All` as the least-privileged application permission for this endpoint. The template can select only the basic profile properties listed in the [permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference?view=graph-rest-1.0); it sends no request and does not handle credentials.
+
+- **November 1, 2026 — bounded Graph user-list preview:** adds a local [`GET /users`](https://learn.microsoft.com/en-us/graph/api/user-list?view=graph-rest-1.0) first-page template. It selects only `id`, `displayName`, and `userPrincipalName` by default, caps its page-size input at 100, and lists the endpoint's least-privileged permissions: delegated `User.ReadBasic.All` and application `User.Read.All`. It does not fetch pages; if an analyst later executes an exported request and receives `@odata.nextLink`, Microsoft says to use that entire URL for the next page. This source preview sends no request and handles no credentials.
 
 - **November 1, 2026 — extension attributes reference:** adds the Graph `onPremisesExtensionAttributes` object and its `extensionAttribute1`–`extensionAttribute15` members to the searchable reference. It explains source-of-authority/read-only behavior for synchronized users and that SAML extension-attribute claims require application configuration. This is reference guidance only; it does not read directory data or predict issued claims.
 
@@ -105,7 +107,10 @@ SAML response destination and correlation guidance follows the [OASIS SAML 2.0 C
 
 The browser and desktop workbench use the same request templates and validation
 functions as the dependency-free Node.js CLI/library. The UI can preview documented
-requests and export JSON, PowerShell, or cURL text. It does not execute requests,
+requests and export JSON, PowerShell, or cURL text. The basic user-list template
+builds only a first-page `GET /users` request with a page-size input from 1 to 100.
+It never follows `@odata.nextLink`; if a separately executed request returns one,
+use the complete returned URL for the next page. It does not execute requests,
 accept credentials, or save tokens or secrets. The Graph builder requires no network
 access; the application Content Security Policy blocks connections.
 
@@ -148,6 +153,10 @@ permission, domain, tenant, or dry-run validation.
 Sources verified October 5, 2026:
 - [Get user](https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0): `/me` uses delegated `User.Read`.
 - [Update user](https://learn.microsoft.com/en-us/graph/api/user-update?view=graph-rest-1.0): the other-user profile template lists `User.ReadUpdate.All`; caller privileges, consent and synchronization/source-of-authority restrictions still apply.
+
+Basic user-list sources verified November 1, 2026:
+- [List users](https://learn.microsoft.com/en-us/graph/api/user-list?view=graph-rest-1.0): documents `/users`, the supported `$select`/`$top` query parameters, and least-privileged delegated `User.ReadBasic.All` and application `User.Read.All` permissions. This preview deliberately limits page size to 100, below the documented maximum of 999.
+- [Paging Microsoft Graph data](https://learn.microsoft.com/en-us/graph/paging): use the complete `@odata.nextLink` URL as returned; behavior and page sizes depend on the endpoint.
 
 Response guidance verified October 31, 2026:
 - [Microsoft Graph error responses](https://learn.microsoft.com/en-us/graph/errors): structured errors include an error code and message; use them with the HTTP status and request ID when available.
