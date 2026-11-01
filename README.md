@@ -8,6 +8,7 @@ Inspect JWT and SAML 2.0 responses locally. Decode claims, compare expected audi
 | --- | --- |
 | Local JWT/SAML inspection and Entra diagnostic clues | Available in the browser and desktop interface |
 | Local OAuth/OIDC authorization-error response diagnosis | Available in the browser and desktop UI |
+| Explicit sanitized diagnostic export | Developer preview in this proposed pull request; exports finding titles and claim names only |
 | Graph request/JSON builder, including a read-only basic-profile lookup, permission and impact previews, PowerShell/cURL export, local response explanations | Available in the browser, desktop UI, and offline Node.js CLI/library |
 | B2B guest UPN targets, including encoded `#EXT#` identifiers | Supported by the Graph profile-update template |
 | Searchable Entra attributes/claims reference in browser and desktop UI | Available (12 curated reference entries, including extension attributes) |
@@ -21,6 +22,8 @@ Linux AppImage, and standalone offline HTML. It predates the October Graph build
 does not automatically update an existing release.
 
 ## Recent updates
+
+- **November 1, 2026 — sanitized diagnostic export (proposed):** adds an explicit local JSON download containing the inspection format, finding severity/title, and claim names. Raw input, decoded values, expected configuration values, and finding detail text are omitted. Nothing is uploaded or retained by the application. [PR #16](https://github.com/Jmiller47904/identity-workbench/pull/16) is open for review; this change is not on the default branch or in v0.2.0 release assets.
 
 - **November 1, 2026 — read-only Graph user lookup:** adds a local [`GET /users/{id | userPrincipalName}`](https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0) template limited to `id`, `displayName`, and `userPrincipalName` by default. Microsoft documents `User.ReadBasic.All` for delegated reads of other users' basic profiles and `User.Read.All` as the least-privileged application permission for this endpoint. The template can select only the basic profile properties listed in the [permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference?view=graph-rest-1.0); it sends no request and does not handle credentials.
 
@@ -59,7 +62,7 @@ does not automatically update an existing release.
 - Offline: download `Identity-Workbench-Offline.html` from [v0.2.0 release assets](https://github.com/Jmiller47904/identity-workbench/releases/tag/v0.2.0) and open it in a modern browser. For the current source version, run `npm run build:web` and open `web-release/Identity-Workbench-Offline.html`; the generated HTML is not included in the source checkout. No installation or connection is needed for inspection once the HTML is saved.
 - Desktop: Windows Setup and Portable executables, macOS DMG, and Linux AppImage are produced by the downloadable-clients workflow. These binaries are not included in the source archive until built. The desktop app bundles the complete interface locally; it does not load the hosted site.
 
-The input stays in page memory. No analytics, token uploads, token history, or browser storage. Documentation links open externally only when clicked. Clearing input or closing the window clears the application's in-memory input, expected values, and results. The operating system may manage memory, crash dumps, or clipboard contents separately.
+The input stays in page memory. No analytics, token uploads, token history, or browser storage. Documentation links open externally only when clicked. The sanitized diagnostic export occurs only when the analyst presses its download button; it contains finding titles and claim names, never the raw input or decoded values. Clearing input or closing the window clears the application's in-memory input, expected values, and results. The operating system and browser download history may retain exported files, and the operating system may manage memory, crash dumps, or clipboard contents separately.
 
 ## Development
 
@@ -88,7 +91,7 @@ Desktop packages are unsigned unless code signing is configured. Windows/macOS c
 
 Supports raw JWT (including Bearer prefix), raw SAML XML, Base64 SAML, SAMLResponse form values, and OAuth/OIDC error callbacks or JSON error objects. The OAuth/OIDC view rejects successful responses containing authorization codes or tokens; it does not authenticate or follow error URIs. It displays provider error descriptions as untrusted developer text and never uses them as a programmatic error key. An optional state comparison checks exact strings locally; it does not establish CSRF protection or validate a complete authentication flow. Encrypted JWE/SAML and multiple assertions are rejected. JWT time claims must decode to finite numeric seconds; malformed or overflowing values are not evaluated as valid dates. SAML condition times use a strict supported subset of XML `dateTime`: a four-digit year, real calendar date, seconds, optional fractional seconds, and explicit `Z` or numeric timezone (up to ±14:00). Time checks use the device clock with no skew allowance. SAML inspection is namespace-aware but does not implement full schema or profile validation. Recipient comparison treats multiple SubjectConfirmation elements as alternatives: at least one inspected recipient must match. When supplied, the expected ACS URL is also compared exactly with the Response `Destination`; the attribute is optional in SAML Core, so absence is described as unavailable rather than automatically rejected. An optional expected AuthnRequest ID is compared exactly with Response `InResponseTo`; missing values are flagged only when an expected request ID is supplied. These comparisons do not verify signatures, request freshness, replay protection, or the complete profile. Supplied SubjectConfirmationData time bounds are assessed per alternative, so an expired unused alternative alone is reported as a warning rather than an assertion-level time failure; an overall time failure is reported only when every inspected alternative with time bounds fails and no alternative is left temporally unassessed. These are configuration clues only; the tool does not establish that a matching confirmation passes its method, signature, response-correlation, or other profile checks. Token claims remain untrusted even if expected strings match.
 
-Synthetic examples contain no real identities or credentials. Never commit production tokens to examples, tests, issues, or build logs.
+Synthetic examples contain no real identities or credentials. Never commit production tokens to examples, tests, issues, or build logs. Sanitization is intentionally conservative but cannot determine whether a custom claim name or diagnostic title is organization-sensitive; review the JSON before sharing it.
 
 OAuth/OIDC error handling verified October 31, 2026:
 - [Microsoft identity platform authorization-code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow): authorization errors can be returned to the redirect URI with error details; when state was sent, the client should verify the returned state.
@@ -158,7 +161,8 @@ increment is explicitly authenticated Graph testing, requiring tenant/account id
 least-privilege guidance, and an impact preview before mutations. The searchable Entra reference covers 12 curated entries and needs broader, continuously verified coverage.
 Later analyst workflows cover app registrations/service principals, roles/consent,
 federation, SCIM/provisioning, certificates, Conditional Access, sign-in diagnostics,
-token comparison, and explicitly saved sanitized case workspaces.
+token comparison, and explicitly saved sanitized case workspaces. The current
+sanitized diagnostic download is a one-time local export, not a saved case workspace.
 
 Long-term ideas are exploratory; they are not implemented or committed releases.
 
