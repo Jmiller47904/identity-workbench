@@ -1,12 +1,18 @@
 'use strict';
 // Deliberately pure: no network, credentials, browser storage or tenant changes.
-const verifiedOn = '2026-10-05';
+const verifiedOn = '2026-11-01';
 const templates = Object.freeze({
   'get-me': Object.freeze({
     method: 'GET', path: '/me', version: 'v1.0',
     source: 'https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0',
     permissions: { delegated: ['User.Read'], application: null },
     note: '/me requires a signed-in user. This template reads only the selected profile fields.'
+  }),
+  'get-user-basic': Object.freeze({
+    method: 'GET', path: '/users/{id}', version: 'v1.0',
+    source: 'https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0',
+    permissions: { delegated: ['User.ReadBasic.All'], application: ['User.Read.All'] },
+    note: 'Reads only basic user properties: id, displayName, givenName, surname, mail, and userPrincipalName. The endpoint documents User.ReadBasic.All for delegated access to other users and User.Read.All for application access.'
   }),
   'update-user-profile': Object.freeze({
     method: 'PATCH', path: '/users/{id}', version: 'v1.0',
@@ -17,6 +23,8 @@ const templates = Object.freeze({
 });
 const fields = new Set(['department', 'jobTitle']);
 const selectable = new Set(['id', 'displayName', 'userPrincipalName', 'department', 'jobTitle']);
+const basicSelectable = new Set(['id', 'displayName', 'givenName', 'surname', 'mail', 'userPrincipalName']);
+const defaultBasicSelection = Object.freeze(['id', 'displayName', 'userPrincipalName']);
 const objectIdPattern = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const upnLocalPattern = /^[A-Za-z0-9'.!#^_~-]+$/;
 const dnsLabelPattern = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/;
@@ -39,7 +47,7 @@ function buildRequest({ template, userId, body, select, authMode = 'delegated' }
   if (!['delegated', 'application'].includes(authMode) || !spec.permissions[authMode])
     throw new Error('This authentication mode is not supported by the template.');
   let path = spec.path;
-  if (template === 'update-user-profile') {
+  if (template === 'update-user-profile' || template === 'get-user-basic') {
     // Single opaque identifier, never a caller-supplied URL/path/query.
     path = '/users/' + encodeUserKey(userId);
   } else if (userId !== undefined) throw new Error('get-me does not accept a user ID.');
@@ -60,7 +68,12 @@ function buildRequest({ template, userId, body, select, authMode = 'delegated' }
     if (select !== undefined) throw new Error('Select is only supported by the get-me template.');
   } else if (body !== undefined) throw new Error('GET must not contain a request body.');
   let query = '';
-  if (select !== undefined) {
+  if (template === 'get-user-basic') {
+    const basicFields = select === undefined ? defaultBasicSelection : select;
+    if (!Array.isArray(basicFields) || !basicFields.length || basicFields.some(k => !basicSelectable.has(k)))
+      throw new Error('This template selects only basic user profile properties.');
+    query = '?$select=' + [...new Set(basicFields)].join(',');
+  } else if (select !== undefined) {
     if (!Array.isArray(select) || !select.length || select.some(k => !selectable.has(k)))
       throw new Error('Select must be a nonempty list of supported profile fields.');
     query = '?$select=' + [...new Set(select)].join(',');
@@ -71,7 +84,9 @@ function buildRequest({ template, userId, body, select, authMode = 'delegated' }
     ...(parsed ? { body: parsed } : {}),
     documentation: { source: spec.source, verifiedOn, apiVersion: spec.version },
     authMode, permissions: [...spec.permissions[authMode]],
-    impact: parsed ? 'Writes the supplied profile fields when executed against a tenant.' : 'Reads the signed-in user profile when executed.',
+    impact: parsed ? 'Writes the supplied profile fields when executed against a tenant.' :
+      template === 'get-user-basic' ? 'Reads the selected basic properties of the specified user when executed.' :
+        'Reads the signed-in user profile when executed.',
     limitations: [spec.note, 'Local template checks only: no request sent, no consent or tenant validation, no Graph dry-run.']
   };
 }
