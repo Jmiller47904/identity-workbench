@@ -80,6 +80,17 @@ test('sanitized export is explicit and no report is retained after clearing',()=
  assert.match(d.querySelector('.diagnostic-export').textContent,/raw input and values are omitted/);
  dom.window.close();
 });
+test('editing inspected input invalidates stale results and export state',()=>{
+ const dom=setup(),d=dom.window.document;
+ d.getElementById('jwt-sample').click();
+ assert.equal(d.getElementById('results').hidden,false);
+ d.getElementById('token').value='different.uninspected.value';
+ d.getElementById('token').dispatchEvent(new dom.window.Event('input',{bubbles:true}));
+ assert.equal(d.getElementById('results').hidden,true);
+ assert.equal(d.getElementById('raw').textContent,'');
+ assert.equal(d.getElementById('export-diagnostics').disabled,true);
+ dom.window.close();
+});
 test('non-finite JWT times report only the invalid claim',()=>{
  const dom=setup(),d=dom.window.document;
  const token=Buffer.from('{"alg":"RS256"}').toString('base64url')+'.'+Buffer.from('{"exp":1e309,"nbf":1e309,"iat":1e309}').toString('base64url')+'.ZXhhbXBsZQ';

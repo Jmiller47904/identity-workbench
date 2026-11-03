@@ -23,6 +23,8 @@ does not automatically update an existing release.
 
 ## Recent updates
 
+- **November 3, 2026 — stale-result invalidation:** editing the JWT, SAML, or OAuth/OIDC input after inspection immediately hides the decoded results and disables diagnostic export until the analyst inspects again. This keeps the visible input aligned with the in-memory result. Available in the browser and desktop source; not included in the published v0.2.0 clients.
+
 - **November 1, 2026 — sanitized diagnostic export:** adds an explicit local JSON download containing the inspection format, finding severity/title, and claim names. Raw input, decoded values, expected configuration values, and finding detail text are omitted. Nothing is uploaded or retained by the application. This is available on the default branch, but not in v0.2.0 release assets.
 
 - **November 1, 2026 — OIDC access-token role/scope guidance:** clarifies locally that `scp` is documented for user tokens, `roles` can represent app roles assigned to users or application permissions, and `roles` without `scp` does not establish an app-only flow. Conflicting decoded `scp` and `idtyp: app` signals receive a review warning. When decoded `idtyp` is `app`, the inspector explains the claim’s optional-claim configuration and trust limits. This is unverified local claim guidance, not authentication or authorization. Sources: [access token claims](https://learn.microsoft.com/en-us/entra/identity-platform/access-token-claims-reference) and [secure claims validation](https://learn.microsoft.com/en-us/entra/identity-platform/claims-validation).
