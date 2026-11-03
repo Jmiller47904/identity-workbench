@@ -274,6 +274,30 @@ test('Graph browser workbench previews a basic other-user read with documented p
  dom.window.close();
 });
 
+test('Graph browser workbench previews only one bounded page of basic users without network access',()=>{
+ const dom=setup(),d=dom.window.document;
+ let fetchCalls=0;dom.window.fetch=()=>{fetchCalls++;throw new Error('network use is forbidden in this test');};
+ d.getElementById('graph-template').value='list-users-basic';
+ d.getElementById('graph-template').dispatchEvent(new dom.window.Event('change'));
+ assert.equal(d.getElementById('graph-user-field').hidden,true);
+ assert.equal(d.getElementById('graph-page-size-field').hidden,false);
+ d.getElementById('graph-page-size').value='40';
+ d.getElementById('graph-preview-button').click();
+ assert.equal(d.getElementById('graph-url').textContent,'https://graph.microsoft.com/v1.0/users?$select=id,displayName,userPrincipalName&$top=40');
+ assert.match(d.getElementById('graph-permissions').textContent,/User.ReadBasic\.All/);
+ assert.match(d.getElementById('graph-impact').textContent,/one page/);
+ assert.match(d.getElementById('graph-limitations').textContent,/complete @odata.nextLink URL/);
+ assert.match(d.getElementById('graph-documentation').href,/graph\/api\/user-list/);
+ assert.match(d.getElementById('graph-result').textContent,/NOT EXECUTED/);
+ d.getElementById('graph-page-size').value='101';
+ d.getElementById('graph-page-size').dispatchEvent(new dom.window.Event('input'));
+ d.getElementById('graph-preview-button').click();
+ assert.match(d.getElementById('graph-error').textContent,/whole number from 1 to 100/);
+ assert.equal(d.getElementById('graph-result').hidden,true);
+ assert.equal(fetchCalls,0);
+ dom.window.close();
+});
+
 test('Graph response explainer gives local throttling guidance and escapes response text',()=>{
  const dom=setup(),d=dom.window.document;
  let fetchCalls=0;dom.window.fetch=()=>{fetchCalls++;throw new Error('network use is forbidden in this test');};
