@@ -60,10 +60,29 @@
     return String(value).trim().slice(0, limit);
   }
 
-  function timestamp(value) {
-    if (typeof value !== 'string' && typeof value !== 'number') return '';
+  function timestamp(value, field) {
+    if (value === undefined || value === null || value === '') return '';
+    if (typeof value !== 'string') throw new Error(field + ' must be an ISO 8601 timestamp with an explicit timezone.');
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-](\d{2}):(\d{2}))$/.exec(value);
+    if (!match) throw new Error(field + ' must be an ISO 8601 timestamp with an explicit timezone.');
+    const parts = match.slice(1, 7).map(Number);
+    const [year, month, day, hour, minute, second] = parts;
+    const calendar = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+    if (
+      calendar.getUTCFullYear() !== year || calendar.getUTCMonth() !== month - 1 ||
+      calendar.getUTCDate() !== day || calendar.getUTCHours() !== hour ||
+      calendar.getUTCMinutes() !== minute || calendar.getUTCSeconds() !== second
+    ) throw new Error(field + ' contains an invalid calendar date or time.');
+    if (match[7] !== 'Z') {
+      const offsetHour = Number(match[8]);
+      const offsetMinute = Number(match[9]);
+      if (offsetHour > 14 || offsetMinute > 59 || (offsetHour === 14 && offsetMinute !== 0)) {
+        throw new Error(field + ' contains an unsupported timezone offset.');
+      }
+    }
     const parsed = Date.parse(value);
-    return Number.isFinite(parsed) ? new Date(parsed).toISOString() : '';
+    if (!Number.isFinite(parsed)) throw new Error(field + ' is outside the supported date range.');
+    return new Date(parsed).toISOString();
   }
 
   function normalizeOwner(value) {
@@ -106,7 +125,7 @@
         scopeId: text(source.scopeId, 200),
         scopeLabel: text(source.scopeLabel || source.label || source.scopeId, 160),
         activityCoverage: coverage,
-        collectedAt: timestamp(source.collectedAt)
+        collectedAt: timestamp(source.collectedAt, 'Source collectedAt')
       };
     }).filter(Boolean) : [];
     const sourceIndex = new Map(sources.map(source => [source.provider + '|' + source.scopeId, source]));
@@ -139,16 +158,16 @@
           type: text(credential.type || credential.kind, 100) || 'credential',
           active: credential.active !== false,
           managed: credential.managed === true,
-          createdAt: timestamp(credential.createdAt || credential.startDateTime),
-          expiresAt: timestamp(credential.expiresAt || credential.endDateTime),
-          lastUsedAt: timestamp(credential.lastUsedAt || credential.lastUsed)
+          createdAt: timestamp(credential.createdAt ?? credential.startDateTime, 'Credential createdAt'),
+          expiresAt: timestamp(credential.expiresAt ?? credential.endDateTime, 'Credential expiresAt'),
+          lastUsedAt: timestamp(credential.lastUsedAt ?? credential.lastUsed, 'Credential lastUsedAt')
         };
       }).filter(Boolean) : [];
 
       const activity = Array.isArray(item.activity) ? item.activity.slice(0, 500).map(event => {
         if (!event || typeof event !== 'object' || Array.isArray(event)) return null;
         return {
-          at: timestamp(event.at || event.createdAt || event.timestamp),
+          at: timestamp(event.at ?? event.createdAt ?? event.timestamp, 'Activity timestamp'),
           action: text(event.action || event.operation, 180),
           target: text(event.target || event.resource, 180),
           source: text(event.source || event.sourceIp || event.workload, 160),
@@ -182,7 +201,7 @@
       };
     });
 
-    return { sources, identities: normalized, scannedAt: timestamp(raw.scannedAt) };
+    return { sources, identities: normalized, scannedAt: timestamp(raw.scannedAt, 'Snapshot scannedAt') };
   }
 
   function latestActivity(identity) {

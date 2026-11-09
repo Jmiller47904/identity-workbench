@@ -89,6 +89,11 @@ The scanner accepts UTF-8 JSON up to 2 MB, 1,000 source scopes, and 5,000 identi
 
 The import rejects known secret-bearing property names. It only reads the documented fields above and displays values with text rendering; it does not interpret snapshot strings as HTML.
 
+All supplied evidence timestamps must be ISO 8601 strings containing seconds and
+an explicit Z or numeric timezone. The importer rejects ambiguous local times,
+impossible calendar dates, numeric epochs, and timezone offsets beyond ±14:00
+instead of silently discarding that evidence.
+
 ## What the scanner flags
 
 The local rules look for missing accountable owners, missing workload links, broad or privileged permissions, external or wildcard trust, active credentials that are expired or near expiry, active credentials without expiry, old credentials, multiple active credentials, and old or absent activity evidence.
