@@ -25,7 +25,7 @@ does not automatically update an existing release.
 ## Recent updates
 
 - **November 3, 2026 — local cross-cloud NHI scanner:** adds an offline inventory analyzer for normalized JSON snapshots from Azure / Entra ID, AWS, Google Cloud, and Okta. It reviews owner and workload coverage, permissions, credential metadata, trust, activity freshness, and evidence-backed risk signals, with provider coverage cards and filters. A synthetic example is included. It makes no provider API calls, accepts no credential values, and stores no snapshot history.
-- **November 9, 2026 — strict NHI evidence timestamps (proposed):** rejects malformed, impossible, timezone-ambiguous, and unsupported-offset timestamps instead of silently dropping them or misclassifying credential/activity evidence. Proposed in [PR #23](https://github.com/Jmiller47904/identity-workbench/pull/23); it is not yet on the default branch or in published clients.
+- **November 9, 2026 — strict NHI evidence timestamps:** rejects malformed, impossible, timezone-ambiguous, and unsupported-offset timestamps instead of silently dropping them or misclassifying credential/activity evidence. Merged in [PR #23](https://github.com/Jmiller47904/identity-workbench/pull/23); available on the default branch, but not in published v0.2.0 clients.
 
 - **November 3, 2026 — stale-result invalidation:** editing the JWT, SAML, or OAuth/OIDC input after inspection immediately hides the decoded results and disables diagnostic export until the analyst inspects again. This keeps the visible input aligned with the in-memory result. Available in the browser and desktop source; not included in the published v0.2.0 clients.
 
@@ -45,14 +45,14 @@ does not automatically update an existing release.
 
 - **October 31, 2026 — searchable Entra reference:** adds a local cross-reference for eleven common Graph user properties and related token claims, including accountEnabled, employeeId, and userType. The entries state when no default token-claim mapping is guaranteed. It distinguishes documented relationships from properties with no guaranteed direct claim mapping and links each entry to Microsoft Learn. The curated reference does not predict tenant output or validate tokens. [PR #6](https://github.com/Jmiller47904/identity-workbench/pull/6).
 
-- **October 19, 2026 — strict SAML time syntax (proposed):** SAML conditions
+- **October 19, 2026 — strict SAML time syntax:** SAML conditions
   reject impossible calendar dates and timezone-ambiguous timestamps instead of
   relying on JavaScript's permissive date normalization. Valid inspected values
   must use the supported XML `dateTime` form with `Z` or a numeric timezone.
   The same PR adds browser/offline and cross-platform desktop packaging checks
   for pull requests while explicitly skipping Pages deployment and releases.
-  [PR #5](https://github.com/Jmiller47904/identity-workbench/pull/5). This is an
-  unmerged source change and is not present in v0.2.0 release assets.
+  [PR #5](https://github.com/Jmiller47904/identity-workbench/pull/5). This is a
+  merged default-branch implementation and is not present in v0.2.0 release assets.
 - **October 12, 2026 — JWT time diagnostics:** malformed numeric dates that
   overflow JavaScript's finite number range are reported only as invalid claims;
   they are no longer also described as future or otherwise valid time values.
