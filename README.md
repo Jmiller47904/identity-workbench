@@ -24,6 +24,8 @@ does not automatically update an existing release.
 
 ## Recent updates
 
+- **November 23, 2026 — desktop asset loading (proposed):** the Electron request allowlist now permits the bundled diagnostic-export and NHI-scanner scripts. All other requests remain blocked; token inspection stays local and ephemeral. Proposed in [PR #25](https://github.com/Jmiller47904/identity-workbench/pull/25); this source fix is pending review and is not included in published v0.2.0 clients.
+
 - **November 3, 2026 — local cross-cloud NHI scanner:** adds an offline inventory analyzer for normalized JSON snapshots from Azure / Entra ID, AWS, Google Cloud, and Okta. It reviews owner and workload coverage, permissions, credential metadata, trust, activity freshness, and evidence-backed risk signals, with provider coverage cards and filters. A synthetic example is included. It makes no provider API calls, accepts no credential values, and stores no snapshot history.
 - **November 9, 2026 — strict NHI evidence timestamps (proposed):** rejects malformed, impossible, timezone-ambiguous, and unsupported-offset timestamps instead of silently dropping them or misclassifying credential/activity evidence. Proposed in [PR #23](https://github.com/Jmiller47904/identity-workbench/pull/23); it is not yet on the default branch or in published clients.
 
