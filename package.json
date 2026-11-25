@@ -15,8 +15,8 @@
     "build:windows": "electron-builder --win --x64 --publish never"
   },
   "devDependencies": {
-    "electron": "44.11.6",
-    "electron-builder": "26.15.3",
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0",
     "jsdom": "26.1.0"
   },
   "build": {
