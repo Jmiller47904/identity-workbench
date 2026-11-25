@@ -14,13 +14,19 @@ const graphJs = fs.readFileSync(path.join(root,'dist/graph-builder.js'),'utf8').
 const diagnosticJs = fs.readFileSync(path.join(root,'dist/diagnostic-export.js'),'utf8').replace(/\r\n?/g,'\n');
 const nhiJs = fs.readFileSync(path.join(root,'dist/nhi-scanner.js'),'utf8').replace(/\r\n?/g,'\n');
 const hash = text => crypto.createHash('sha256').update(text).digest('base64');
+// Fail the build if dist/index.html drifts and a substitution silently matches nothing.
+const replaceOnce = (source, pattern, replacement) => {
+  if (!source.includes(pattern)) throw new Error('Web build substitution not found: ' + pattern);
+  return source.replace(pattern, replacement);
+};
 let html = fs.readFileSync(path.join(root,'dist/index.html'),'utf8');
-html = html.replace("script-src 'self'",`script-src 'sha256-${hash(graphJs)}' 'sha256-${hash(diagnosticJs)}' 'sha256-${hash(nhiJs)}' 'sha256-${hash(js)}'`).replace("style-src 'self'",`style-src 'sha256-${hash(css)}'`)
-  .replace('<link rel="stylesheet" href="style.css">',()=>`<style>${css}</style>`)
-  .replace('<script src="graph-builder.js"></script><script src="diagnostic-export.js"></script><script src="nhi-scanner.js"></script><script src="app.js"></script>',()=>`<script>${graphJs}</script><script>${diagnosticJs}</script><script>${nhiJs}</script><script>${js}</script>`);
+html = replaceOnce(html,"script-src 'self'",`script-src 'sha256-${hash(graphJs)}' 'sha256-${hash(diagnosticJs)}' 'sha256-${hash(nhiJs)}' 'sha256-${hash(js)}'`);
+html = replaceOnce(html,"style-src 'self'",`style-src 'sha256-${hash(css)}'`);
+html = replaceOnce(html,'<link rel="stylesheet" href="style.css">',()=>`<style>${css}</style>`);
+html = replaceOnce(html,'<script src="graph-builder.js"></script><script src="diagnostic-export.js"></script><script src="nhi-scanner.js"></script><script src="app.js"></script>',()=>`<script>${graphJs}</script><script>${diagnosticJs}</script><script>${nhiJs}</script><script>${js}</script>`);
 fs.writeFileSync(path.join(output,'Identity-Workbench-Offline.html'),html);
 let web = fs.readFileSync(path.join(output,'index.html'),'utf8');
-web = web.replace('<span class="local">', '<a class="offline-download" href="Identity-Workbench-Offline.html" download>Download offline app ↓</a><span class="local">');
+web = replaceOnce(web,'<span class="local">', '<a class="offline-download" href="Identity-Workbench-Offline.html" download>Download offline app ↓</a><span class="local">');
 fs.writeFileSync(path.join(output,'index.html'),web);
 fs.appendFileSync(path.join(output,'style.css'),'\n.offline-download{color:var(--accent);font-size:14px;margin-left:auto;white-space:nowrap}@media(max-width:700px){header{flex-wrap:wrap}.local{display:none}.offline-download{font-size:12px}}\n');
 console.log('Browser site and self-contained offline client built.');

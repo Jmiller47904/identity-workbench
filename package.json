@@ -1,6 +1,6 @@
 {
   "name": "identity-workbench",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Local JWT and SAML inspection for identity engineers.",
   "author": "SirSlautty",
@@ -15,7 +15,7 @@
     "build:windows": "electron-builder --win --x64 --publish never"
   },
   "devDependencies": {
-    "electron": "44.2.0",
+    "electron": "44.11.6",
     "electron-builder": "26.15.3",
     "jsdom": "26.1.0"
   },
@@ -25,6 +25,7 @@
     "directories": {"output": "release"},
     "files": ["electron/**", "dist/index.html", "dist/app.js", "dist/graph-builder.js", "dist/diagnostic-export.js", "dist/nhi-scanner.js", "dist/style.css", "package.json"],
     "asar": true,
+    "electronFuses": {"runAsNode": false, "enableCookieEncryption": true, "enableNodeOptionsEnvironmentVariable": false, "enableNodeCliInspectArguments": false, "enableEmbeddedAsarIntegrityValidation": true, "onlyLoadAppFromAsar": true},
     "publish": null,
     "win": {"target": ["nsis", "portable"], "signAndEditExecutable": false},
     "nsis": {"oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "artifactName": "Identity-Workbench-${version}-Windows-Setup.${ext}"},

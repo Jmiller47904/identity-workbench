@@ -24,7 +24,9 @@ does not automatically update an existing release.
 
 ## Recent updates
 
-- **November 23, 2026 — desktop asset loading (proposed):** the Electron request allowlist now permits the bundled diagnostic-export and NHI-scanner scripts. All other requests remain blocked; token inspection stays local and ephemeral. Proposed in [PR #25](https://github.com/Jmiller47904/identity-workbench/pull/25); this source fix is pending review and is not included in published v0.2.0 clients.
+- **November 25, 2026 — v0.3.0 security hardening (proposed):** PowerShell exports now double the Unicode single-quote characters (U+2018–U+201B) that PowerShell treats as string delimiters, which closes a command-injection path through Graph profile values. Electron moves to 44.11.6 for upstream security fixes, and desktop builds turn off Node-escape fuses (`RunAsNode`, `NODE_OPTIONS`, inspector flags) and enforce asar integrity. The NHI scanner also rejects credential-shaped values under any key, rejects inherited object names as providers, and reuses computed risk scores so filtering stays responsive on large snapshots. Releases now publish only from version tags, with SHA-256 checksums and build-provenance attestations. Pending review; not yet published.
+
+- **November 23, 2026 — desktop asset loading:** the Electron request allowlist now permits the bundled diagnostic-export and NHI-scanner scripts. All other requests remain blocked; token inspection stays local and ephemeral. Merged in [PR #25](https://github.com/Jmiller47904/identity-workbench/pull/25); not included in published v0.2.0 clients.
 
 - **November 3, 2026 — local cross-cloud NHI scanner:** adds an offline inventory analyzer for normalized JSON snapshots from Azure / Entra ID, AWS, Google Cloud, and Okta. It reviews owner and workload coverage, permissions, credential metadata, trust, activity freshness, and evidence-backed risk signals, with provider coverage cards and filters. A synthetic example is included. It makes no provider API calls, accepts no credential values, and stores no snapshot history.
 - **November 9, 2026 — strict NHI evidence timestamps:** rejects malformed, impossible, timezone-ambiguous, and unsupported-offset timestamps instead of silently dropping them or misclassifying credential/activity evidence. Merged in [PR #23](https://github.com/Jmiller47904/identity-workbench/pull/23); available on the default branch, but not in published v0.2.0 clients.
@@ -86,18 +88,19 @@ Requires Node.js 22.13 or newer. Run `npm ci`, then `npm test`.
 - `npm run desktop:dist -- --mac`: build macOS on a Mac.
 - `npm run desktop:dist -- --linux`: build Linux on Linux.
 
-Dependencies are pinned and the lockfile is committed. Electron uses sandboxing, context isolation, no Node access in the renderer, no preload/IPC bridge, an in-memory session, denied permissions, and a local asset allowlist. Renderer navigation and arbitrary external links are blocked. See https://www.electronjs.org/docs/latest/tutorial/security.
+Dependencies are pinned and the lockfile is committed. Electron uses sandboxing, context isolation, no Node access in the renderer, no preload/IPC bridge, an in-memory session, denied permissions, and a local asset allowlist. Packaged builds disable the `RunAsNode`, `NODE_OPTIONS`, and inspector-argument fuses and only load the integrity-checked app archive. Renderer navigation and arbitrary external links are blocked. See https://www.electronjs.org/docs/latest/tutorial/security.
 
 ## GitHub deployment
 
 1. Create or select the GitHub repository and push this source to `main`.
 2. In Settings → Pages, select **GitHub Actions** as the publishing source. Check the site's intended audience; GitHub Pages access is separate from source-repository visibility.
 3. The **Publish browser app** workflow tests browser/offline builds on pull requests and deploys `web-release/` only after a push to `main` or an explicit manual run. Relative paths support repository subpaths.
-4. The **Build downloadable clients** workflow packages Windows, macOS and Linux clients on pull requests, pushes to main, version tags, or manual runs. Pull requests upload review artifacts but never publish a release. For non-PR runs, after all builds pass, it publishes the package version as a GitHub Release if that version does not already exist. Existing releases are never overwritten. Bump package.json and the lockfile version before publishing updated release assets.
+4. The **Build downloadable clients** workflow packages Windows, macOS and Linux clients on pull requests, pushes to main, version tags, or manual runs. Only a pushed `vX.Y.Z` tag publishes a GitHub Release. The tag must match the package.json version. After all builds pass, the workflow publishes the assets with a `SHA256SUMS.txt` file and a GitHub build-provenance attestation. Existing releases are never overwritten. To release, bump the package.json and lockfile versions, merge to `main`, then run `git tag vX.Y.Z` and `git push origin vX.Y.Z` on that commit.
+5. Workflow actions are pinned to commit SHAs. Dependabot proposes weekly npm and Actions updates.
 
 GitHub Pages workflow reference: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
 
-Desktop packages are unsigned unless code signing is configured. Windows/macOS can show publisher warnings. macOS builds are not notarized. No automatic updater or updater signing bypass is included. Use a trusted release; do not disable OS protections globally.
+Desktop packages are unsigned unless code signing is configured. Windows/macOS can show publisher warnings. macOS builds are not notarized. No automatic updater or updater signing bypass is included. Use a trusted release; do not disable OS protections globally. To verify a download, compare it with `SHA256SUMS.txt` or run `gh attestation verify <file> --repo Jmiller47904/identity-workbench`.
 
 ## Scope and limits
 

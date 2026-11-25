@@ -41,3 +41,11 @@ test('desktop request policy allows bundled page assets and blocks all other req
     assert.equal(allowed(url), false, url);
   }
 });
+
+test('desktop package disables Node-escape fuses and enforces asar integrity', () => {
+  const { build } = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+  assert.deepEqual(build.electronFuses, {
+    runAsNode: false, enableCookieEncryption: true, enableNodeOptionsEnvironmentVariable: false,
+    enableNodeCliInspectArguments: false, enableEmbeddedAsarIntegrityValidation: true, onlyLoadAppFromAsar: true
+  });
+});

@@ -87,7 +87,7 @@ The scanner accepts UTF-8 JSON up to 2 MB, 1,000 source scopes, and 5,000 identi
 | `activity` | Optional events with timestamp, action, target, source, and outcome. Keep provider-native action names when possible. |
 | `providerManaged` | Mark provider-owned identities so missing application-team ownership is not treated as an orphan. |
 
-The import rejects known secret-bearing property names. It only reads the documented fields above and displays values with text rendering; it does not interpret snapshot strings as HTML.
+The import rejects known secret-bearing property names and any string value shaped like a well-known credential: PEM private keys, JWTs, AWS access key IDs, Google API keys, GitHub and Slack tokens, Okta `SSWS` API tokens, Azure storage account keys, and bearer tokens. Pattern checks catch common formats only; they do not make it safe to include secrets. It only reads the documented fields above and displays values with text rendering; it does not interpret snapshot strings as HTML.
 
 All supplied evidence timestamps must be ISO 8601 strings containing seconds and
 an explicit Z or numeric timezone. The importer rejects ambiguous local times,

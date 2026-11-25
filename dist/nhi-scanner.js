@@ -16,6 +16,18 @@
     'accesstoken', 'refreshtoken', 'idtoken', 'sessiontoken', 'bearertoken',
     'token', 'tokenvalue', 'apikey', 'credential', 'credentialvalue', 'key', 'authorization'
   ]);
+  // Well-known credential formats, rejected wherever they appear as values.
+  const secretValuePatterns = [
+    /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+    /\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*/,
+    /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/,
+    /\bAIza[0-9A-Za-z_-]{35}\b/,
+    /\bgh[pousr]_[A-Za-z0-9]{36,}\b/,
+    /\bxox[abprs]-[A-Za-z0-9-]{10,}/,
+    /\bSSWS\s+[A-Za-z0-9_-]{20,}/,
+    /\bAccountKey=[A-Za-z0-9+/]{20,}/i,
+    /\bBearer\s+[A-Za-z0-9._~+/-]{20,}/i
+  ];
   let snapshot = null;
   let identities = [];
 
@@ -49,6 +61,9 @@
         const sensitive = blockedKeys.has(normalized) || normalized.includes('secret') || normalized.includes('privatekey') || normalized.endsWith('password');
         if (!Array.isArray(current.value) && sensitive) {
           throw new Error('Secret-bearing fields are not accepted. Remove keys, tokens, passwords, and credential values; include metadata only.');
+        }
+        if (typeof child === 'string' && secretValuePatterns.some(pattern => pattern.test(child))) {
+          throw new Error('A value looks like a credential (private key, token, or access key). Remove credential values; include metadata only.');
         }
         if (child && typeof child === 'object') pending.push({ value: child, depth: current.depth + 1 });
       }
@@ -118,7 +133,7 @@
     if (Array.isArray(raw.sources) && raw.sources.length > 1000) throw new Error('This local preview is limited to 1,000 source scopes per snapshot.');
 
     const sources = Array.isArray(raw.sources) ? raw.sources.map(source => {
-      if (!source || typeof source !== 'object' || !providers[source.provider]) return null;
+      if (!source || typeof source !== 'object' || !Object.hasOwn(providers, source.provider)) return null;
       const coverage = ['complete', 'partial', 'none'].includes(source.activityCoverage) ? source.activityCoverage : 'unknown';
       return {
         provider: source.provider,
@@ -136,7 +151,7 @@
       for (const [field, limit] of Object.entries({ permissions: 100, credentials: 50, activity: 500, trusts: 100 })) {
         if (Array.isArray(item[field]) && item[field].length > limit) throw new Error('Identity ' + (index + 1) + ' exceeds the local ' + field + ' limit of ' + limit + '.');
       }
-      if (!providers[item.provider]) throw new Error('Identity ' + (index + 1) + ' has an unsupported provider. Use azure, aws, gcp, or okta.');
+      if (!Object.hasOwn(providers, item.provider)) throw new Error('Identity ' + (index + 1) + ' has an unsupported provider. Use azure, aws, gcp, or okta.');
       const id = text(item.id, 240);
       const displayName = text(item.displayName || item.name, 240);
       if (!id || !displayName) throw new Error('Identity ' + (index + 1) + ' needs both an id and displayName.');
@@ -425,8 +440,7 @@
     const query = $('nhi-search').value.trim().toLocaleLowerCase();
     return identities.filter(identity => {
       if (provider && identity.provider !== provider) return false;
-      const risk = riskFor(identity);
-      if (level && risk.level !== level) return false;
+      if (level && identity.risk.level !== level) return false;
       const haystack = [
         identity.displayName, identity.id, identity.kind, identity.owner.name,
         identity.owner.email, identity.owner.team, identity.workload,
@@ -434,7 +448,7 @@
         ...identity.permissions
       ].join(' ').toLocaleLowerCase();
       return !query || haystack.includes(query);
-    }).sort((a, b) => riskFor(b).score - riskFor(a).score || a.displayName.localeCompare(b.displayName));
+    }).sort((a, b) => b.risk.score - a.risk.score || a.displayName.localeCompare(b.displayName));
   }
 
   function renderRows() {
@@ -451,7 +465,7 @@
       return;
     }
     for (const identity of matches) {
-      const risk = riskFor(identity);
+      const risk = identity.risk;
       const row = el('tr', 'nhi-identity-row');
       const identityCell = el('td');
       identityCell.append(el('strong', 'nhi-identity-name', identity.displayName), el('small', 'nhi-identity-id', identity.id));
@@ -480,7 +494,7 @@
   }
 
   function renderResults() {
-    const results = identities.map(identity => ({ identity, risk: riskFor(identity) }));
+    const results = identities.map(identity => ({ identity, risk: identity.risk }));
     const highCount = results.filter(item => item.risk.level === 'critical' || item.risk.level === 'high').length;
     const ownedCount = identities.filter(identity => identity.owner.name || identity.owner.email || identity.owner.team || identity.providerManaged).length;
     const activityCount = results.filter(item => item.risk.lastActivity).length;

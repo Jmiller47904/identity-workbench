@@ -105,7 +105,8 @@ function buildRequest({ template, userId, body, select, pageSize, authMode = 'de
     limitations: [spec.note, 'Local template checks only: no request sent, no consent or tenant validation, no Graph dry-run.']
   };
 }
-const psQuote = value => "'" + value.replace(/'/g, "''") + "'";
+// PowerShell also treats U+2018–U+201B as single quotes; double every variant.
+const psQuote = value => "'" + value.replace(/['‘’‚‛]/g, '$&$&') + "'";
 const shQuote = value => "'" + value.replace(/'/g, "'\"'\"'") + "'";
 function exportRequest(request, format) {
   if (format === 'json') return JSON.stringify(request, null, 2);

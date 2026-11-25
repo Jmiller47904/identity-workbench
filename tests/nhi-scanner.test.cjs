@@ -67,3 +67,41 @@ test('NHI scanner rejects numeric dates and secret-bearing fields without echoin
   assert.doesNotMatch(document.getElementById('nhi-error').textContent, /DO_NOT_ECHO/);
   dom.window.close();
 });
+
+test('NHI scanner rejects inherited object names as providers', () => {
+  for (const provider of ['constructor', 'toString', '__proto__']) {
+    const dom = setup();
+    const document = analyze(dom, minimalSnapshot({ provider }));
+    assert.equal(document.getElementById('nhi-results').hidden, true, provider);
+    assert.match(document.getElementById('nhi-error').textContent, /unsupported provider/, provider);
+    dom.window.close();
+  }
+});
+
+test('NHI scanner rejects credential-shaped values under innocuous keys without echoing them', () => {
+  const values = [
+    '-----BEGIN PRIVATE KEY-----\nMIIDO_NOT_ECHO\n-----END PRIVATE KEY-----',
+    'eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJET19OT1RfRUNITyJ9.c2lnbmF0dXJl',
+    'AKIAABCDEFGHIJKLMNOP',
+    'ghp_' + 'A'.repeat(36),
+    'SSWS 00DO_NOT_ECHO_abcdefghijklmn'
+  ];
+  for (const value of values) {
+    const dom = setup();
+    const document = analyze(dom, minimalSnapshot({ notes: value, permissions: [{ name: 'Reader', scope: value }] }));
+    assert.equal(document.getElementById('nhi-results').hidden, true, value);
+    assert.match(document.getElementById('nhi-error').textContent, /looks like a credential/, value);
+    assert.doesNotMatch(document.getElementById('nhi-error').textContent, /DO_NOT_ECHO|AKIA|ghp_/);
+    dom.window.close();
+  }
+});
+
+test('NHI synthetic sample passes the secret-value checks', () => {
+  const dom = setup();
+  const document = dom.window.document;
+  document.getElementById('nhi-sample').click();
+  assert.equal(document.getElementById('nhi-error').textContent, '');
+  assert.equal(document.getElementById('nhi-results').hidden, false);
+  assert.ok(document.querySelectorAll('.nhi-identity-row').length > 0);
+  dom.window.close();
+});

@@ -24,8 +24,10 @@ jobs:
             args: --linux --x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: npm
@@ -36,7 +38,7 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - name: Upload client
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Identity-Workbench-${{ matrix.platform }}
           if-no-files-found: error
@@ -47,37 +49,59 @@ jobs:
   offline:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
       - run: npm run build:web
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Identity-Workbench-Offline
           path: web-release/Identity-Workbench-Offline.html
           if-no-files-found: error
   release:
-    if: github.event_name != 'pull_request'
+    # Publish only from an explicit version tag (vX.Y.Z), never from a branch push.
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: [build, offline]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: downloads
           merge-multiple: true
+      - name: Check tag matches package version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          EXPECTED="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$EXPECTED" ]; then
+            echo "Tag $TAG does not match package.json version $EXPECTED." >&2
+            exit 1
+          fi
+      - name: Write checksums
+        working-directory: downloads
+        run: sha256sum -- * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-checksums: downloads/SHA256SUMS.txt
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          SOURCE_SHA: ${{ github.sha }}
+          TAG: ${{ github.ref_name }}
         run: |
-          RELEASE_TAG="v$(node -p "require('./package.json').version")"
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          if gh release view "$TAG" >/dev/null 2>&1; then
             echo "This version is already published; artifacts remain available on this run."
             exit 0
           fi
-          gh release create "$RELEASE_TAG" downloads/* --target "$SOURCE_SHA" --generate-notes --title "Identity Workbench $RELEASE_TAG"
+          gh release create "$TAG" downloads/* --verify-tag --generate-notes --title "Identity Workbench $TAG"
