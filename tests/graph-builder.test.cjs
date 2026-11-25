@@ -96,6 +96,16 @@ test('exports quote literals without embedding or requesting credentials', () =>
   assert.equal(JSON.parse(exportRequest(r,'json')).method,'PATCH');
   assert.throws(() => exportRequest(r,'bash'));
 });
+test('PowerShell export doubles Unicode single-quote variants PowerShell treats as delimiters', () => {
+  for (const quote of ['‘', '’', '‚', '‛']) {
+    const r = buildRequest({template:'update-user-profile', userId:'a@example.com', body:{department:`x${quote}; Write-Output INJECTED; ${quote}`}});
+    const line = exportRequest(r,'powershell').split('\n')[2];
+    assert.ok(line.includes(`x${quote}${quote}; Write-Output INJECTED; ${quote}${quote}`), quote);
+    // Every quote-like character inside the -Body literal must be paired.
+    const literal = line.slice(line.indexOf("-Body '") + 7, -1);
+    assert.equal(literal.replace(/(['‘’‚‛])\1/g, '').match(/['‘’‚‛]/), null, quote);
+  }
+});
 test('CLI returns a request and rejects secret-bearing definitions without disclosure', () => {
   const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
   const { spawnSync } = require('node:child_process');
